@@ -53,8 +53,8 @@ class QuestionIndexViewTests(TestCase):
         self.assertContains(response, "No polls are available.")
         self.assertQuerySetEqual(response.context["latest_question_list"], [])
 
-    class QuestionDetailViewTests(TestCase):
-        def test_future_question(self):
+class QuestionDetailViewTests(TestCase):
+    def test_future_question(self):
             """
             The detail view of a question with a pub_date in the future
             returns a 404 not found.
@@ -64,7 +64,7 @@ class QuestionIndexViewTests(TestCase):
             response = self.client.get(url)
             self.assertEqual(response.status_code, 404)
 
-        def test_past_question(self):
+    def test_past_question(self):
             """
             The detail view of a question with a pub_date in the past
             displays the question's text.
@@ -74,7 +74,7 @@ class QuestionIndexViewTests(TestCase):
             response = self.client.get(url)
             self.assertContains(response, past_question.question_text)
 
-        def test_future_question_and_past_question(self):
+    def test_future_question_and_past_question(self):
             """
             Even if both past and future questions exist, only past questions
             are displayed.
@@ -87,7 +87,7 @@ class QuestionIndexViewTests(TestCase):
                 [question],
             )
 
-        def test_two_past_questions(self):
+    def test_two_past_questions(self):
             """
             The questions index page may display multiple questions.
             """
@@ -98,3 +98,4 @@ class QuestionIndexViewTests(TestCase):
                 response.context["latest_question_list"],
                 [question2, question1],
             )
+        

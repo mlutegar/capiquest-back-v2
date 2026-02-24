@@ -2,6 +2,7 @@ import datetime
 from django.db import models
 from django.utils import timezone
 from django.contrib import admin
+from django.urls import reverse
 
 class Question(models.Model):
     question_text = models.CharField(max_length=200)
@@ -24,5 +25,61 @@ class Choice(models.Model):
     def __str__(self):
         return self.choice_text
 
+class Tarefa(models.Model):
+    """
+    Modelo para representar uma tarefa no sistema
+    """
+    # Campos
+    titulo = models.CharField(
+        max_length=200, 
+        help_text='Digite o título da tarefa',
+        verbose_name='Título'
+    )
+    
+    concluida = models.BooleanField(
+        default=False,
+        verbose_name='Concluída?',
+        help_text='Marque se a tarefa já foi concluída'
+    )
+    
+    data_criacao = models.DateTimeField(
+        default=timezone.now,
+        verbose_name='Data de Criação',
+        help_text='Data e hora em que a tarefa foi criada'
+    )
+    
+    # Opcional: data de conclusão (útil para controle)
+    data_conclusao = models.DateTimeField(
+        null=True, 
+        blank=True,
+        verbose_name='Data de Conclusão',
+        help_text='Data em que a tarefa foi concluída (preenchido automaticamente)'
+    )
 
+    # Metadados
+    class Meta:
+        ordering = ['-data_criacao']  # Ordena da mais recente para a mais antiga
+        verbose_name = 'Tarefa'
+        verbose_name_plural = 'Tarefas'
+
+    # Métodos
+    def __str__(self):
+        """String para representar a tarefa (no admin e elsewhere)"""
+        return self.titulo
+
+    def marcar_concluida(self):
+        """Marca a tarefa como concluída e registra a data"""
+        self.concluida = True
+        self.data_conclusao = timezone.now()
+        self.save()
+
+    def get_absolute_url(self):
+        """Retorna a URL para detalhes da tarefa"""
+        return reverse('tarefa-detail', args=[str(self.id)])
+
+    @property
+    def dias_desde_criacao(self):
+        """Retorna quantos dias se passaram desde a criação"""
+        delta = timezone.now() - self.data_criacao
+        return delta.days
 # Create your models here.

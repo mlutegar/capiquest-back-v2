@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Lista de Tarefas</h1>
+
+<!-- Filtros -->
+<div class="filtros">
+    <a href="?filtro=todas">Todas</a> |
+    <a href="?filtro=pendentes">Pendentes</a> |
+    <a href="?filtro=concluidas">Concluídas</a>
+</div>
+
+<!-- Botão nova tarefa -->
+<a href="{% url 'polls:tarefa_create' %}">Nova Tarefa</a>
+
+<!-- Lista de tarefas -->
+<ul>
+{% for tarefa in tarefas %}
+    <li>
+        <input type="checkbox" {% if tarefa.concluida %}checked{% endif %} 
+               onclick="window.location.href='{% url 'polls:tarefa_concluir' tarefa.pk %}'">
+        <a href="{% url 'polls:tarefa_detail' tarefa.pk %}">{{ tarefa.titulo }}</a>
+        {% if tarefa.concluida %}
+            <span>(Concluída em {{ tarefa.data_conclusao|date:"d/m/Y H:i" }})</span>
+        {% else %}
+            <span>(Criada em {{ tarefa.data_criacao|date:"d/m/Y H:i" }})</span>
+        {% endif %}
+    </li>
+{% empty %}
+    <li>Nenhuma tarefa encontrada.</li>
+{% endfor %}
+</ul>
+
+<!-- Paginação -->
+<div class="pagination">
+    {% if page_obj.has_previous %}
+        <a href="?page=1">&laquo; primeira</a>
+        <a href="?page={{ page_obj.previous_page_number }}">anterior</a>
+    {% endif %}
+
+    <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+
+    {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}">próxima</a>
+        <a href="?page={{ page_obj.paginator.num_pages }}">última &raquo;</a>
+    {% endif %}
+</div>
+{% endblock %}

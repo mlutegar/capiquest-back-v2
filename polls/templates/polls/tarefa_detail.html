@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>{{ tarefa.titulo }}</h1>
+
+<div class="tarefa-info">
+    <p><strong>Status:</strong> {% if tarefa.concluida %}✅ Concluída{% else %}⏳ Pendente{% endif %}</p>
+    <p><strong>Data de Criação:</strong> {{ tarefa.data_criacao|date:"d/m/Y H:i" }}</p>
+    {% if tarefa.concluida %}
+        <p><strong>Data de Conclusão:</strong> {{ tarefa.data_conclusao|date:"d/m/Y H:i" }}</p>
+    {% endif %}
+</div>
+
+<div class="acoes">
+    <a href="{% url 'polls:tarefa_list' %}">Voltar</a>
+    <a href="{% url 'polls:tarefa_edit' tarefa.pk %}">Editar</a>
+    <form method="post" action="{% url 'polls:tarefa_concluir' tarefa.pk %}" style="display: inline;">
+        {% csrf_token %}
+        <button type="submit">{% if tarefa.concluida %}Reabrir{% else %}Concluir{% endif %}</button>
+    </form>
+    <a href="{% url 'polls:tarefa_delete' tarefa.pk %}">Deletar</a>
+</div>
+{% endblock %}

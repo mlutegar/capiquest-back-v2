@@ -7,12 +7,14 @@ from django.urls import reverse
 class Question(models.Model):
     question_text = models.CharField(max_length=200)
     pub_date = models.DateTimeField("data published")
+    
     def __str__(self):
         return self.question_text
+    
     @admin.display(
-    boolean=True,
-    ordering="pub_date",
-    description="Published recently?",
+        boolean=True,
+        ordering="pub_date",
+        description="Published recently?",
     )
     def was_published_recently(self):
         now = timezone.now()
@@ -21,15 +23,16 @@ class Question(models.Model):
 class Choice(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
     choice_text = models.CharField(max_length=200)
-    votes = models.IntegerField(default = 0)
+    votes = models.IntegerField(default=0)
+    
     def __str__(self):
         return self.choice_text
 
+# ===== NOVO MODELO TAREFA =====
 class Tarefa(models.Model):
     """
     Modelo para representar uma tarefa no sistema
     """
-    # Campos
     titulo = models.CharField(
         max_length=200, 
         help_text='Digite o título da tarefa',
@@ -48,23 +51,19 @@ class Tarefa(models.Model):
         help_text='Data e hora em que a tarefa foi criada'
     )
     
-    # Opcional: data de conclusão (útil para controle)
     data_conclusao = models.DateTimeField(
         null=True, 
         blank=True,
         verbose_name='Data de Conclusão',
-        help_text='Data em que a tarefa foi concluída (preenchido automaticamente)'
+        help_text='Data em que a tarefa foi concluída'
     )
 
-    # Metadados
     class Meta:
-        ordering = ['-data_criacao']  # Ordena da mais recente para a mais antiga
+        ordering = ['-data_criacao']
         verbose_name = 'Tarefa'
         verbose_name_plural = 'Tarefas'
 
-    # Métodos
     def __str__(self):
-        """String para representar a tarefa (no admin e elsewhere)"""
         return self.titulo
 
     def marcar_concluida(self):
@@ -75,11 +74,10 @@ class Tarefa(models.Model):
 
     def get_absolute_url(self):
         """Retorna a URL para detalhes da tarefa"""
-        return reverse('tarefa-detail', args=[str(self.id)])
+        return reverse('polls:tarefa_detail', args=[str(self.id)])
 
     @property
     def dias_desde_criacao(self):
         """Retorna quantos dias se passaram desde a criação"""
         delta = timezone.now() - self.data_criacao
         return delta.days
-# Create your models here.

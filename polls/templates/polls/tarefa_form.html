@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>{% if object %}Editar{% else %}Nova{% endif %} Tarefa</h1>
+
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Salvar</button>
+    <a href="{% url 'polls:tarefa_list' %}">Cancelar</a>
+</form>
+{% endblock %}

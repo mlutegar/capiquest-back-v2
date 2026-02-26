@@ -17,8 +17,9 @@
 <ul>
 {% for tarefa in tarefas %}
     <li>
+        {% url 'polls:tarefa_concluir' tarefa.pk as concluir_url %}
         <input type="checkbox" {% if tarefa.concluida %}checked{% endif %} 
-               onclick="window.location.href='{% url 'polls:tarefa_concluir' tarefa.pk %}'">
+               onclick="window.location.href='{{ concluir_url }}'">
         <a href="{% url 'polls:tarefa_detail' tarefa.pk %}">{{ tarefa.titulo }}</a>
         {% if tarefa.concluida %}
             <span>(Concluída em {{ tarefa.data_conclusao|date:"d/m/Y H:i" }})</span>

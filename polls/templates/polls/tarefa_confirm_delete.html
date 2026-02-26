@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Deletar Tarefa</h1>
+<p>Tem certeza que deseja deletar "{{ object.titulo }}"?</p>
+<form method="post">
+    {% csrf_token %}
+    <button type="submit">Sim, deletar</button>
+    <a href="{% url 'polls:tarefa_detail' object.pk %}">Cancelar</a>
+</form>
+{% endblock %}

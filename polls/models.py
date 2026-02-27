@@ -28,7 +28,7 @@ class Choice(models.Model):
     def __str__(self):
         return self.choice_text
 
-# ===== NOVO MODELO TAREFA =====
+
 class Tarefa(models.Model):
     """
     Modelo para representar uma tarefa no sistema
@@ -81,3 +81,76 @@ class Tarefa(models.Model):
         """Retorna quantos dias se passaram desde a criação"""
         delta = timezone.now() - self.data_criacao
         return delta.days
+
+
+# ===== NOVOS MODELOS: CRIANCA E SESSAO =====
+
+class Crianca(models.Model):
+    """
+    Modelo para representar uma criança no sistema
+    """
+    nome = models.CharField(
+        max_length=100,
+        verbose_name='Nome',
+        help_text='Nome da criança'
+    )
+    
+    idade = models.IntegerField(
+        verbose_name='Idade',
+        help_text='Idade da criança em anos'
+    )
+    
+    data_cadastro = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Data de Cadastro'
+    )
+    
+    class Meta:
+        verbose_name = 'Criança'
+        verbose_name_plural = 'Crianças'
+        ordering = ['nome']
+    
+    def __str__(self):
+        return f"{self.nome} ({self.idade} anos)"
+
+
+class Sessao(models.Model):
+    """
+    Modelo para representar uma sessão de uma criança
+    """
+    crianca = models.ForeignKey(
+        Crianca,
+        on_delete=models.CASCADE,
+        related_name='sessoes',
+        verbose_name='Criança'
+    )
+    
+    data_inicio = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Data de Início'
+    )
+    
+    data_fim = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Data de Fim'
+    )
+    
+    # Campos para as funcionalidades futuras
+    pontuacao = models.IntegerField(
+        default=0,
+        verbose_name='Pontuação'
+    )
+    
+    class Meta:
+        verbose_name = 'Sessão'
+        verbose_name_plural = 'Sessões'
+        ordering = ['-data_inicio']
+    
+    def __str__(self):
+        return f"Sessão de {self.crianca.nome} - {self.data_inicio.strftime('%d/%m/%Y %H:%M')}"
+    
+    def finalizar(self):
+        """Finaliza a sessão registrando a data de fim"""
+        self.data_fim = timezone.now()
+        self.save()

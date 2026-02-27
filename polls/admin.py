@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.utils import timezone
-from .models import Question, Choice, Tarefa
+from .models import Question, Choice, Tarefa, Crianca, Sessao
 
 class ChoiceInline(admin.TabularInline):
     model = Choice
@@ -19,7 +19,7 @@ class QuestionAdmin(admin.ModelAdmin):
 admin.site.register(Question, QuestionAdmin)
 admin.site.register(Choice)
 
-# ===== ADMIN PARA TAREFAS =====
+
 @admin.register(Tarefa)
 class TarefaAdmin(admin.ModelAdmin):
     list_display = ['titulo', 'concluida', 'data_criacao', 'data_conclusao']
@@ -27,14 +27,12 @@ class TarefaAdmin(admin.ModelAdmin):
     search_fields = ['titulo']
     date_hierarchy = 'data_criacao'
     
-    # Ações personalizadas
     actions = ['marcar_como_concluidas']
     
     def marcar_como_concluidas(self, request, queryset):
         queryset.update(concluida=True, data_conclusao=timezone.now())
     marcar_como_concluidas.short_description = "Marcar tarefas selecionadas como concluídas"
     
-    # Personalização do formulário
     fieldsets = [
         (None, {'fields': ['titulo', 'concluida']}),
         ('Informações de Data', {
@@ -44,3 +42,22 @@ class TarefaAdmin(admin.ModelAdmin):
     ]
     
     readonly_fields = ['data_conclusao']
+
+
+# ===== NOVOS ADMINS PARA CRIANÇAS E SESSÕES =====
+
+@admin.register(Crianca)
+class CriancaAdmin(admin.ModelAdmin):
+    list_display = ['nome', 'idade', 'data_cadastro']
+    list_filter = ['idade']
+    search_fields = ['nome']
+    date_hierarchy = 'data_cadastro'
+
+
+@admin.register(Sessao)
+class SessaoAdmin(admin.ModelAdmin):
+    list_display = ['id', 'crianca', 'data_inicio', 'data_fim', 'pontuacao']
+    list_filter = ['data_inicio', 'crianca']
+    search_fields = ['crianca__nome']
+    date_hierarchy = 'data_inicio'
+    readonly_fields = ['data_inicio']

@@ -4,14 +4,14 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.urls import reverse, reverse_lazy
 from django.views import generic
 from django.utils import timezone
-from .models import Choice, Question, Tarefa
+from .models import Choice, Question, Tarefa, Crianca, Sessao
 
 # ===== IMPORTS DA API =====
 from rest_framework import generics, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .serializers import TarefaSerializer
+from .serializers import TarefaSerializer, CriancaSerializer, SessaoSerializer, IniciarSessaoSerializer
 
 # ========== VIEWS EXISTENTES PARA ENQUETES ==========
 
@@ -119,34 +119,21 @@ class TarefaConcluirView(generic.View):
         tarefa.save()
         return redirect('polls:tarefa_list')
 
-# ========== VIEWS DA API REST ==========
+# ========== VIEWS DA API REST PARA TAREFAS ==========
 
 class TarefaListCreateAPIView(generics.ListCreateAPIView):
-    """
-    API Endpoints:
-    GET /api/tarefas/ - Lista todas as tarefas
-    POST /api/tarefas/ - Cria uma nova tarefa
-    """
     queryset = Tarefa.objects.all().order_by('-data_criacao')
     serializer_class = TarefaSerializer
     
     def perform_create(self, serializer):
-        """Define a data de criação automaticamente"""
         serializer.save(data_criacao=timezone.now())
 
 
 class TarefaRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
-    """
-    API Endpoints:
-    GET /api/tarefas/{id}/ - Detalhes de uma tarefa
-    PUT /api/tarefas/{id}/ - Atualiza uma tarefa
-    DELETE /api/tarefas/{id}/ - Deleta uma tarefa
-    """
     queryset = Tarefa.objects.all()
     serializer_class = TarefaSerializer
     
     def perform_update(self, serializer):
-        """Atualiza data_conclusao quando marcar/desmarcar como concluída"""
         tarefa = self.get_object()
         
         if serializer.validated_data.get('concluida') and not tarefa.concluida:
@@ -157,47 +144,72 @@ class TarefaRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
             serializer.save()
 
 
-# Views alternativas baseadas em função (comentadas)
-"""
-@api_view(['GET', 'POST'])
-def tarefa_list_api(request):
-    if request.method == 'GET':
-        tarefas = Tarefa.objects.all().order_by('-data_criacao')
-        serializer = TarefaSerializer(tarefas, many=True)
-        return Response(serializer.data)
+# ===== NOVAS VIEWS PARA CRIANÇAS E SESSÕES =====
+
+class IniciarSessaoView(generics.CreateAPIView):
+    """
+    POST /api/sessoes/iniciar/
+    Recebe nome e idade, retorna sessão criada
+    """
+    serializer_class = IniciarSessaoSerializer
     
-    elif request.method == 'POST':
-        serializer = TarefaSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save(data_criacao=timezone.now())
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        # Cria a sessão (e a criança se necessário)
+        sessao = serializer.save()
+        
+        # Retorna os dados completos da sessão
+        response_serializer = SessaoSerializer(sessao)
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
-@api_view(['GET', 'PUT', 'DELETE'])
-def tarefa_detail_api(request, pk):
-    try:
-        tarefa = Tarefa.objects.get(pk=pk)
-    except Tarefa.DoesNotExist:
-        return Response({'error': 'Tarefa não encontrada'}, status=status.HTTP_404_NOT_FOUND)
+class CriancaListView(generics.ListCreateAPIView):
+    """
+    GET /api/criancas/ - Lista todas as crianças
+    POST /api/criancas/ - Cria uma nova criança
+    """
+    queryset = Crianca.objects.all()
+    serializer_class = CriancaSerializer
+
+
+class CriancaDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET /api/criancas/{id}/ - Detalhes de uma criança
+    PUT /api/criancas/{id}/ - Atualiza uma criança
+    DELETE /api/criancas/{id}/ - Deleta uma criança
+    """
+    queryset = Crianca.objects.all()
+    serializer_class = CriancaSerializer
+
+
+class SessaoListView(generics.ListAPIView):
+    """
+    GET /api/sessoes/ - Lista todas as sessões
+    """
+    queryset = Sessao.objects.all()
+    serializer_class = SessaoSerializer
+
+
+class SessaoDetailView(generics.RetrieveAPIView):
+    """
+    GET /api/sessoes/{id}/ - Detalhes de uma sessão
+    """
+    queryset = Sessao.objects.all()
+    serializer_class = SessaoSerializer
+
+
+class FinalizarSessaoView(generics.UpdateAPIView):
+    """
+    POST /api/sessoes/{id}/finalizar/
+    Finaliza uma sessão
+    """
+    queryset = Sessao.objects.all()
+    serializer_class = SessaoSerializer
     
-    if request.method == 'GET':
-        serializer = TarefaSerializer(tarefa)
+    def update(self, request, *args, **kwargs):
+        sessao = self.get_object()
+        sessao.finalizar()
+        serializer = self.get_serializer(sessao)
         return Response(serializer.data)
-    
-    elif request.method == 'PUT':
-        serializer = TarefaSerializer(tarefa, data=request.data)
-        if serializer.is_valid():
-            if serializer.validated_data.get('concluida') and not tarefa.concluida:
-                serializer.save(data_conclusao=timezone.now())
-            elif not serializer.validated_data.get('concluida'):
-                serializer.save(data_conclusao=None)
-            else:
-                serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-    elif request.method == 'DELETE':
-        tarefa.delete()
-        return Response({'message': 'Tarefa deletada com sucesso'}, status=status.HTTP_204_NO_CONTENT)
-"""

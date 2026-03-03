@@ -30,9 +30,6 @@ class Choice(models.Model):
 
 
 class Tarefa(models.Model):
-    """
-    Modelo para representar uma tarefa no sistema
-    """
     titulo = models.CharField(
         max_length=200, 
         help_text='Digite o título da tarefa',
@@ -67,28 +64,32 @@ class Tarefa(models.Model):
         return self.titulo
 
     def marcar_concluida(self):
-        """Marca a tarefa como concluída e registra a data"""
         self.concluida = True
         self.data_conclusao = timezone.now()
         self.save()
 
     def get_absolute_url(self):
-        """Retorna a URL para detalhes da tarefa"""
         return reverse('polls:tarefa_detail', args=[str(self.id)])
 
     @property
     def dias_desde_criacao(self):
-        """Retorna quantos dias se passaram desde a criação"""
         delta = timezone.now() - self.data_criacao
         return delta.days
 
 
-# ===== NOVOS MODELOS: CRIANCA E SESSAO =====
-
 class Crianca(models.Model):
     """
     Modelo para representar uma criança no sistema
+    AGORA COM INSTITUIÇÃO COMO CAMPO DE TEXTO SIMPLES
     """
+    instituicao = models.CharField(
+        max_length=200,
+        verbose_name='Instituição',
+        help_text='Nome da escola/instituição da criança',
+        blank=True,  # Permite vazio
+        null=True    # Permite nulo no banco
+    )
+    
     nome = models.CharField(
         max_length=100,
         verbose_name='Nome',
@@ -111,7 +112,10 @@ class Crianca(models.Model):
         ordering = ['nome']
     
     def __str__(self):
-        return f"{self.nome} ({self.idade} anos)"
+        if self.instituicao:
+            return f"{self.nome} ({self.idade} anos) - {self.instituicao}"
+        else:
+            return f"{self.nome} ({self.idade} anos)"
 
 
 class Sessao(models.Model):
@@ -125,6 +129,15 @@ class Sessao(models.Model):
         verbose_name='Criança'
     )
     
+    # Instituição agora é apenas uma cópia/reflexo do campo da criança
+    instituicao = models.CharField(
+        max_length=200,
+        verbose_name='Instituição',
+        help_text='Instituição da criança no momento da sessão',
+        blank=True,
+        null=True
+    )
+    
     data_inicio = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Data de Início'
@@ -136,7 +149,6 @@ class Sessao(models.Model):
         verbose_name='Data de Fim'
     )
     
-    # Campos para as funcionalidades futuras
     pontuacao = models.IntegerField(
         default=0,
         verbose_name='Pontuação'
@@ -148,9 +160,17 @@ class Sessao(models.Model):
         ordering = ['-data_inicio']
     
     def __str__(self):
-        return f"Sessão de {self.crianca.nome} - {self.data_inicio.strftime('%d/%m/%Y %H:%M')}"
+        if self.instituicao:
+            return f"Sessão de {self.crianca.nome} - {self.instituicao} - {self.data_inicio.strftime('%d/%m/%Y %H:%M')}"
+        else:
+            return f"Sessão de {self.crianca.nome} - {self.data_inicio.strftime('%d/%m/%Y %H:%M')}"
+    
+    def save(self, *args, **kwargs):
+        # Auto-preenche instituição baseado na criança se não foi fornecido
+        if not self.instituicao and self.crianca_id:
+            self.instituicao = self.crianca.instituicao
+        super().save(*args, **kwargs)
     
     def finalizar(self):
-        """Finaliza a sessão registrando a data de fim"""
         self.data_fim = timezone.now()
         self.save()

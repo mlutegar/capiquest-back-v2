@@ -32,32 +32,20 @@ class TarefaAdmin(admin.ModelAdmin):
     def marcar_como_concluidas(self, request, queryset):
         queryset.update(concluida=True, data_conclusao=timezone.now())
     marcar_como_concluidas.short_description = "Marcar tarefas selecionadas como concluídas"
-    
-    fieldsets = [
-        (None, {'fields': ['titulo', 'concluida']}),
-        ('Informações de Data', {
-            'fields': ['data_criacao', 'data_conclusao'],
-            'classes': ['collapse']
-        }),
-    ]
-    
-    readonly_fields = ['data_conclusao']
 
-
-# ===== NOVOS ADMINS PARA CRIANÇAS E SESSÕES =====
 
 @admin.register(Crianca)
 class CriancaAdmin(admin.ModelAdmin):
-    list_display = ['nome', 'idade', 'data_cadastro']
-    list_filter = ['idade']
-    search_fields = ['nome']
+    list_display = ['nome', 'idade', 'instituicao', 'data_cadastro']
+    list_filter = ['idade', 'instituicao']
+    search_fields = ['nome', 'instituicao']
     date_hierarchy = 'data_cadastro'
 
 
 @admin.register(Sessao)
 class SessaoAdmin(admin.ModelAdmin):
-    list_display = ['id', 'crianca', 'data_inicio', 'data_fim', 'pontuacao']
-    list_filter = ['data_inicio', 'crianca']
-    search_fields = ['crianca__nome']
+    list_display = ['id', 'crianca', 'instituicao', 'data_inicio', 'data_fim', 'pontuacao']
+    list_filter = ['data_inicio', 'instituicao', 'crianca']
+    search_fields = ['crianca__nome', 'instituicao']
     date_hierarchy = 'data_inicio'
     readonly_fields = ['data_inicio']

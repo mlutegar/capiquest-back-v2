@@ -21,7 +21,7 @@ urlpatterns = [
     path("api/tarefas/", views.TarefaListCreateAPIView.as_view(), name="api_tarefa_list_create"),
     path("api/tarefas/<int:pk>/", views.TarefaRetrieveUpdateDestroyAPIView.as_view(), name="api_tarefa_detail"),
     
-    # ===== NOVAS URLs para Crianças e Sessões =====
+    # ===== URLs para Crianças e Sessões (AGORA SEM INSTITUIÇÃO COMO CLASSE) =====
     path("api/sessoes/iniciar/", views.IniciarSessaoView.as_view(), name="api_sessao_iniciar"),
     path("api/sessoes/", views.SessaoListView.as_view(), name="api_sessao_list"),
     path("api/sessoes/<int:pk>/", views.SessaoDetailView.as_view(), name="api_sessao_detail"),

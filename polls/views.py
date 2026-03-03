@@ -8,10 +8,11 @@ from .models import Choice, Question, Tarefa, Crianca, Sessao
 
 # ===== IMPORTS DA API =====
 from rest_framework import generics, status
-from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework.views import APIView
-from .serializers import TarefaSerializer, CriancaSerializer, SessaoSerializer, IniciarSessaoSerializer
+from .serializers import (
+    TarefaSerializer, CriancaSerializer, 
+    SessaoSerializer, IniciarSessaoSerializer
+)
 
 # ========== VIEWS EXISTENTES PARA ENQUETES ==========
 
@@ -144,12 +145,12 @@ class TarefaRetrieveUpdateDestroyAPIView(generics.RetrieveUpdateDestroyAPIView):
             serializer.save()
 
 
-# ===== NOVAS VIEWS PARA CRIANÇAS E SESSÕES =====
+# ===== VIEWS PARA CRIANÇAS E SESSÕES (SEM INSTITUIÇÃO COMO CLASSE) =====
 
 class IniciarSessaoView(generics.CreateAPIView):
     """
     POST /api/sessoes/iniciar/
-    Recebe nome e idade, retorna sessão criada
+    Recebe instituicao (nome), nome e idade, retorna sessão criada
     """
     serializer_class = IniciarSessaoSerializer
     

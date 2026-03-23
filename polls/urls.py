@@ -48,3 +48,12 @@ urlpatterns = [
          views.RankingCapituloView.as_view(), 
          name="api_ranking_capitulo"),
 ]
+
+# Adicione ao final do urlpatterns:
+
+    # ===== URLs PARA PRÉ-FASE E PROGRESSÃO =====
+path("api/pre-fase/desafios/", views.PreFaseDesafioListView.as_view(), name="api_prefase_desafios"),
+path("api/pre-fase/salvaresposta/", views.SalvarRespostaPreFaseView.as_view(), name="api_prefase_salvar"),
+path("api/pre-fase/status/<int:aluno_id>/", views.StatusPreFaseView.as_view(), name="api_prefase_status"),
+    
+path("api/progressao/<int:aluno_id>/", views.ProgressaoView.as_view(), name="api_progressao"),

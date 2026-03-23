@@ -100,6 +100,26 @@ class Crianca(models.Model):
         help_text='Idade da criança em anos'
     )
     
+    # ===== CAMPOS PARA PRÉ-FASE =====
+    fase_atual = models.CharField(
+        max_length=50,
+        verbose_name='Fase Atual',
+        help_text='Fase atual do aluno (pre_fase, capitulo_1, capitulo_2, etc)',
+        default='pre_fase'
+    )
+    
+    progresso_pre_fase = models.IntegerField(
+        default=0,
+        verbose_name='Progresso Pré-Fase',
+        help_text='Quantidade de desafios concluídos na pré-fase'
+    )
+    
+    total_pre_fase = models.IntegerField(
+        default=5,
+        verbose_name='Total Pré-Fase',
+        help_text='Total de desafios necessários para completar a pré-fase'
+    )
+    
     data_cadastro = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Data de Cadastro'
@@ -115,6 +135,20 @@ class Crianca(models.Model):
             return f"{self.nome} ({self.idade} anos) - {self.instituicao}"
         else:
             return f"{self.nome} ({self.idade} anos)"
+    
+    def completou_pre_fase(self):
+        """Verifica se o aluno completou a pré-fase"""
+        return self.progresso_pre_fase >= self.total_pre_fase
+    
+    def avancar_pre_fase(self):
+        """Avança o progresso na pré-fase"""
+        if self.progresso_pre_fase < self.total_pre_fase:
+            self.progresso_pre_fase += 1
+            if self.completou_pre_fase():
+                self.fase_atual = 'capitulo_1'
+            self.save()
+            return True
+        return False
 
 
 class Sessao(models.Model):
@@ -364,7 +398,6 @@ class Interacao(models.Model):
         
         dificuldade = self.desafio.caminho.dificuldade.lower()
         
-        # Mapeamento de pontuação por dificuldade
         tabela_pontos = {
             'fácil': 10,
             'facil': 10,
@@ -378,9 +411,113 @@ class Interacao(models.Model):
     
     def save(self, *args, **kwargs):
         """Auto-preenche acertou e pontos"""
-        if not self.pk:  # Só na criação
+        if not self.pk:
             self.acertou = self.resposta_dada.strip().lower() == self.desafio.resposta_correta.strip().lower()
         
         self.pontos = self.calcular_pontos()
         
+        super().save(*args, **kwargs)
+
+
+# ===== NOVOS MODELOS: PRÉ-FASE =====
+
+class PreFaseDesafio(models.Model):
+    """
+    Modelo para representar um desafio da pré-fase
+    (fase de nivelamento antes dos capítulos principais)
+    """
+    TIPO_PISTA_CHOICES = [
+        ('text', 'Texto'),
+        ('image', 'Imagem'),
+        ('audio', 'Áudio'),
+    ]
+    
+    ordem = models.IntegerField(
+        verbose_name='Ordem',
+        help_text='Ordem do desafio na pré-fase'
+    )
+    
+    tipo_pista = models.CharField(
+        max_length=10,
+        choices=TIPO_PISTA_CHOICES,
+        verbose_name='Tipo de Pista',
+        default='text'
+    )
+    
+    conteudo_pista = models.TextField(
+        verbose_name='Conteúdo da Pista',
+        help_text='Texto, URL da imagem ou áudio'
+    )
+    
+    resposta_correta = models.CharField(
+        max_length=500,
+        verbose_name='Resposta Correta',
+        help_text='Resposta esperada para o desafio'
+    )
+    
+    dica = models.TextField(
+        verbose_name='Dica',
+        help_text='Dica para ajudar o aluno',
+        blank=True,
+        null=True
+    )
+    
+    class Meta:
+        verbose_name = 'Desafio da Pré-Fase'
+        verbose_name_plural = 'Desafios da Pré-Fase'
+        ordering = ['ordem']
+    
+    def __str__(self):
+        return f"Pré-Fase - Desafio {self.ordem}"
+
+
+class InteracaoPreFase(models.Model):
+    """
+    Modelo para registrar interações dos alunos na pré-fase
+    """
+    aluno = models.ForeignKey(
+        Crianca,
+        on_delete=models.CASCADE,
+        related_name='interacoes_pre_fase',
+        verbose_name='Aluno'
+    )
+    
+    desafio = models.ForeignKey(
+        PreFaseDesafio,
+        on_delete=models.CASCADE,
+        related_name='interacoes',
+        verbose_name='Desafio'
+    )
+    
+    resposta_dada = models.CharField(
+        max_length=500,
+        verbose_name='Resposta Dada'
+    )
+    
+    acertou = models.BooleanField(
+        verbose_name='Acertou?'
+    )
+    
+    tentativas = models.IntegerField(
+        default=1,
+        verbose_name='Número de Tentativas'
+    )
+    
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Data/Hora'
+    )
+    
+    class Meta:
+        verbose_name = 'Interação Pré-Fase'
+        verbose_name_plural = 'Interações Pré-Fase'
+        ordering = ['-created_at']
+        unique_together = ['aluno', 'desafio']
+    
+    def __str__(self):
+        return f"{self.aluno.nome} - Pré-Fase Desafio {self.desafio.ordem} - {'✅' if self.acertou else '❌'}"
+    
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            self.acertou = self.resposta_dada.strip().lower() == self.desafio.resposta_correta.strip().lower()
         super().save(*args, **kwargs)

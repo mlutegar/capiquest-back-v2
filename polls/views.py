@@ -540,3 +540,181 @@ class RankingCapituloView(generics.GenericAPIView):
             'total_alunos': len(ranking_data),
             'ranking': ranking_data
         })
+
+# Adicione ao final do arquivo views.py
+
+# ===== IMPORTS ADICIONAIS =====
+from .models import PreFaseDesafio, InteracaoPreFase
+from .serializers import (
+    PreFaseDesafioSerializer, InteracaoPreFaseSerializer,
+    SalvarRespostaPreFaseSerializer, ProgressaoSerializer
+)
+
+
+# ===== VIEWS PARA PRÉ-FASE =====
+
+class PreFaseDesafioListView(generics.ListAPIView):
+    """
+    GET /api/pre-fase/desafios/
+    Lista todos os desafios da pré-fase
+    """
+    queryset = PreFaseDesafio.objects.all().order_by('ordem')
+    serializer_class = PreFaseDesafioSerializer
+
+
+class SalvarRespostaPreFaseView(generics.CreateAPIView):
+    """
+    POST /api/pre-fase/salvaresposta/
+    Salva resposta do aluno na pré-fase
+    """
+    serializer_class = SalvarRespostaPreFaseSerializer
+
+
+class StatusPreFaseView(generics.GenericAPIView):
+    """
+    GET /api/pre-fase/status/{aluno_id}/
+    Retorna o status do aluno na pré-fase
+    """
+    def get(self, request, aluno_id):
+        try:
+            aluno = Crianca.objects.get(pk=aluno_id)
+        except Crianca.DoesNotExist:
+            return Response(
+                {'erro': 'Aluno não encontrado'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        desafios_concluidos = InteracaoPreFase.objects.filter(
+            aluno=aluno,
+            acertou=True
+        ).count()
+        
+        return Response({
+            'aluno_id': aluno.id,
+            'aluno_nome': aluno.nome,
+            'fase_atual': aluno.fase_atual,
+            'progresso_pre_fase': {
+                'concluidos': desafios_concluidos,
+                'total': aluno.total_pre_fase,
+                'percentual': int((desafios_concluidos / aluno.total_pre_fase) * 100) if aluno.total_pre_fase > 0 else 0,
+                'completou': desafios_concluidos >= aluno.total_pre_fase
+            },
+            'proximo_desafio': PreFaseDesafio.objects.filter(
+                ordem__gt=desafios_concluidos
+            ).order_by('ordem').values('id', 'ordem', 'tipo_pista').first()
+        })
+
+
+class ProgressaoView(generics.GenericAPIView):
+    """
+    GET /api/progressao/{aluno_id}/
+    Retorna qual capítulo o aluno deve jogar a seguir
+    """
+    def get(self, request, aluno_id):
+        from django.db.models import Sum, Count
+        
+        try:
+            aluno = Crianca.objects.get(pk=aluno_id)
+        except Crianca.DoesNotExist:
+            return Response(
+                {'erro': 'Aluno não encontrado'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Validação da pré-fase
+        if aluno.fase_atual == 'pre_fase':
+            desafios_concluidos = InteracaoPreFase.objects.filter(
+                aluno=aluno,
+                acertou=True
+            ).count()
+            
+            total_desafios = PreFaseDesafio.objects.count()
+            
+            if desafios_concluidos != aluno.progresso_pre_fase:
+                aluno.progresso_pre_fase = desafios_concluidos
+                aluno.save()
+            
+            if desafios_concluidos >= aluno.total_pre_fase:
+                aluno.fase_atual = 'capitulo_1'
+                aluno.save()
+                return self._proximo_capitulo(aluno)
+            
+            proximo_desafio = PreFaseDesafio.objects.filter(
+                ordem__gt=desafios_concluidos
+            ).order_by('ordem').first()
+            
+            return Response({
+                'fase_atual': 'pre_fase',
+                'pode_prosseguir': False,
+                'mensagem': f'Complete mais {aluno.total_pre_fase - desafios_concluidos} desafios para avançar',
+                'progresso': {
+                    'desafios_concluidos': desafios_concluidos,
+                    'total_desafios': aluno.total_pre_fase,
+                    'percentual': int((desafios_concluidos / aluno.total_pre_fase) * 100)
+                },
+                'proximo_desafio': {
+                    'id': proximo_desafio.id,
+                    'ordem': proximo_desafio.ordem,
+                    'tipo_pista': proximo_desafio.tipo_pista,
+                    'conteudo_pista': proximo_desafio.conteudo_pista,
+                    'dica': proximo_desafio.dica
+                } if proximo_desafio else None
+            })
+        
+        return self._proximo_capitulo(aluno)
+    
+    def _proximo_capitulo(self, aluno):
+        """Determina qual capítulo o aluno deve jogar a seguir"""
+        capitulos = Capitulo.objects.all().order_by('ordem')
+        
+        interacoes = Interacao.objects.filter(
+            aluno=aluno
+        ).select_related('desafio__caminho__capitulo')
+        
+        capitulos_concluidos = set()
+        for interacao in interacoes:
+            if interacao.acertou:
+                capitulo_id = interacao.desafio.caminho.capitulo.id
+                capitulos_concluidos.add(capitulo_id)
+        
+        proximo_capitulo = None
+        for capitulo in capitulos:
+            if capitulo.id not in capitulos_concluidos:
+                proximo_capitulo = capitulo
+                break
+        
+        if proximo_capitulo:
+            total_desafios_capitulo = Desafio.objects.filter(
+                caminho__capitulo=proximo_capitulo
+            ).count()
+            
+            desafios_feitos = interacoes.filter(
+                desafio__caminho__capitulo=proximo_capitulo
+            ).count()
+            
+            return Response({
+                'fase_atual': 'capitulo',
+                'pode_prosseguir': True,
+                'mensagem': f'Você está no {proximo_capitulo.titulo}',
+                'proximo_capitulo': {
+                    'id': proximo_capitulo.id,
+                    'titulo': proximo_capitulo.titulo,
+                    'descricao': proximo_capitulo.descricao,
+                    'ordem': proximo_capitulo.ordem
+                },
+                'progresso': {
+                    'desafios_feitos': desafios_feitos,
+                    'total_desafios': total_desafios_capitulo,
+                    'percentual': int((desafios_feitos / total_desafios_capitulo) * 100) if total_desafios_capitulo > 0 else 0
+                }
+            })
+        
+        return Response({
+            'fase_atual': 'concluido',
+            'pode_prosseguir': False,
+            'mensagem': 'Parabéns! Você completou todos os capítulos!',
+            'progresso': {
+                'capitulos_concluidos': len(capitulos_concluidos),
+                'total_capitulos': capitulos.count()
+            }
+        })

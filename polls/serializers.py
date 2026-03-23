@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 from .models import (
-    Tarefa, Crianca, Sessao, 
+    InteracaoPreFase, PreFaseDesafio, Tarefa, Crianca, Sessao, 
     Capitulo, Caminho, Desafio, Interacao
 )
 
@@ -154,3 +154,79 @@ class ResultadoSerializer(serializers.Serializer):
     ultimas_atividades = serializers.ListField()
     ranking_top5 = serializers.ListField()
     data_consulta = serializers.DateTimeField()
+
+# Adicione ao final do arquivo serializers.py
+
+# ===== SERIALIZERS PARA PRÉ-FASE =====
+
+class PreFaseDesafioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PreFaseDesafio
+        fields = ['id', 'ordem', 'tipo_pista', 'conteudo_pista', 'dica', 'resposta_correta']
+        read_only_fields = ['id']
+
+
+class InteracaoPreFaseSerializer(serializers.ModelSerializer):
+    aluno_nome = serializers.CharField(source='aluno.nome', read_only=True)
+    
+    class Meta:
+        model = InteracaoPreFase
+        fields = ['id', 'aluno', 'aluno_nome', 'desafio', 'resposta_dada', 'acertou', 'tentativas', 'created_at']
+        read_only_fields = ['id', 'acertou', 'created_at']
+
+
+class SalvarRespostaPreFaseSerializer(serializers.Serializer):
+    """Serializer para salvar resposta na pré-fase"""
+    aluno_id = serializers.IntegerField()
+    desafio_id = serializers.IntegerField()
+    resposta_dada = serializers.CharField(max_length=500)
+    
+    def validate(self, data):
+        try:
+            aluno = Crianca.objects.get(pk=data['aluno_id'])
+        except Crianca.DoesNotExist:
+            raise serializers.ValidationError({'aluno_id': 'Aluno não encontrado'})
+        
+        # Verifica se o aluno está na pré-fase
+        if aluno.fase_atual != 'pre_fase':
+            raise serializers.ValidationError({'aluno': 'Aluno não está na pré-fase'})
+        
+        try:
+            desafio = PreFaseDesafio.objects.get(pk=data['desafio_id'])
+        except PreFaseDesafio.DoesNotExist:
+            raise serializers.ValidationError({'desafio_id': 'Desafio não encontrado'})
+        
+        return data
+    
+    def create(self, validated_data):
+        aluno = Crianca.objects.get(pk=validated_data['aluno_id'])
+        desafio = PreFaseDesafio.objects.get(pk=validated_data['desafio_id'])
+        
+        interacao, created = InteracaoPreFase.objects.get_or_create(
+            aluno=aluno,
+            desafio=desafio,
+            defaults={
+                'resposta_dada': validated_data['resposta_dada'],
+                'tentativas': 1
+            }
+        )
+        
+        if not created:
+            interacao.tentativas += 1
+            interacao.resposta_dada = validated_data['resposta_dada']
+            interacao.save()
+        
+        # Se acertou, avança progresso na pré-fase
+        if interacao.acertou and created:
+            aluno.avancar_pre_fase()
+        
+        return interacao
+
+
+class ProgressaoSerializer(serializers.Serializer):
+    """Serializer para resposta do endpoint de progressão"""
+    fase_atual = serializers.CharField()
+    pode_prosseguir = serializers.BooleanField()
+    mensagem = serializers.CharField()
+    proximo_capitulo = serializers.DictField(required=False)
+    progresso = serializers.DictField()

@@ -452,3 +452,93 @@ class InteracaoAdmin(admin.ModelAdmin):
 admin.site.site_header = 'Administração do Sistema Polls'
 admin.site.site_title = 'Polls Admin'
 admin.site.index_title = 'Bem-vindo ao Painel de Administração'
+
+# ===== ADMIN PARA PRÉ-FASE (VERSÃO CORRIGIDA) =====
+
+from .models import PreFaseDesafio, InteracaoPreFase
+
+
+@admin.register(PreFaseDesafio)
+class PreFaseDesafioAdmin(admin.ModelAdmin):
+    """
+    Administração para os desafios da pré-fase
+    """
+    list_display = ['ordem', 'tipo_pista', 'conteudo_resumido', 'resposta_correta', 'dica_resumida']
+    list_display_links = ['tipo_pista']  # Tipo da pista vira link
+    list_editable = ['ordem']  # Ordem editável diretamente na lista
+    search_fields = ['conteudo_pista', 'resposta_correta']
+    list_filter = ['tipo_pista']
+    list_per_page = 20
+    
+    fieldsets = [
+        ('Configuração', {
+            'fields': ['ordem', 'tipo_pista'],
+            'classes': ['wide']
+        }),
+        ('Conteúdo', {
+            'fields': ['conteudo_pista', 'resposta_correta', 'dica'],
+            'classes': ['wide']
+        }),
+    ]
+    
+    def conteudo_resumido(self, obj):
+        """Resumo do conteúdo para a listagem"""
+        if obj.conteudo_pista and len(obj.conteudo_pista) > 50:
+            return obj.conteudo_pista[:50] + '...'
+        return obj.conteudo_pista or '-'
+    conteudo_resumido.short_description = 'Conteúdo'
+    
+    def dica_resumida(self, obj):
+        """Resumo da dica para a listagem"""
+        if obj.dica:
+            if len(obj.dica) > 40:
+                return obj.dica[:40] + '...'
+            return obj.dica
+        return '-'
+    dica_resumida.short_description = 'Dica'
+
+
+@admin.register(InteracaoPreFase)
+class InteracaoPreFaseAdmin(admin.ModelAdmin):
+    """
+    Administração para as interações da pré-fase
+    """
+    list_display = ['aluno', 'desafio', 'acertou_icone', 'tentativas', 'created_at']
+    list_display_links = ['aluno']  # Aluno vira link
+    list_filter = ['acertou', 'created_at']
+    search_fields = ['aluno__nome', 'resposta_dada']
+    readonly_fields = ['created_at']
+    list_per_page = 30
+    date_hierarchy = 'created_at'
+    
+    fieldsets = [
+        ('Quem', {
+            'fields': ['aluno'],
+            'classes': ['wide']
+        }),
+        ('Desafio', {
+            'fields': ['desafio', 'resposta_dada'],
+            'classes': ['wide']
+        }),
+        ('Resultado', {
+            'fields': ['acertou', 'tentativas'],
+            'classes': ['wide']
+        }),
+        ('Quando', {
+            'fields': ['created_at'],
+            'classes': ['collapse']
+        }),
+    ]
+    
+    def acertou_icone(self, obj):
+        """Ícone para acerto/erro"""
+        if obj.acertou:
+            return '<span style="color: green;">✅ Sim</span>'
+        return '<span style="color: red;">❌ Não</span>'
+    acertou_icone.short_description = 'Acertou?'
+    acertou_icone.allow_tags = True
+    
+    def desafio_info(self, obj):
+        """Informações do desafio"""
+        return f"Desafio {obj.desafio.ordem}"
+    desafio_info.short_description = 'Desafio'

@@ -1,8 +1,11 @@
 import datetime
+from decimal import Decimal
 from django.db import models
 from django.utils import timezone
 from django.contrib import admin
 from django.urls import reverse
+
+# ========== MODELOS EXISTENTES (ENQUETES E TAREFAS) ==========
 
 class Question(models.Model):
     question_text = models.CharField(max_length=200)
@@ -19,7 +22,8 @@ class Question(models.Model):
     def was_published_recently(self):
         now = timezone.now()
         return now - datetime.timedelta(days=1) <= self.pub_date <= now
-    
+
+
 class Choice(models.Model):
     question = models.ForeignKey(Question, on_delete=models.CASCADE)
     choice_text = models.CharField(max_length=200)
@@ -31,29 +35,12 @@ class Choice(models.Model):
 
 class Tarefa(models.Model):
     titulo = models.CharField(
-        max_length=200, 
-        help_text='Digite o título da tarefa',
+        max_length=200,
         verbose_name='Título'
     )
-    
-    concluida = models.BooleanField(
-        default=False,
-        verbose_name='Concluída?',
-        help_text='Marque se a tarefa já foi concluída'
-    )
-    
-    data_criacao = models.DateTimeField(
-        default=timezone.now,
-        verbose_name='Data de Criação',
-        help_text='Data e hora em que a tarefa foi criada'
-    )
-    
-    data_conclusao = models.DateTimeField(
-        null=True, 
-        blank=True,
-        verbose_name='Data de Conclusão',
-        help_text='Data em que a tarefa foi concluída'
-    )
+    concluida = models.BooleanField(default=False)
+    data_criacao = models.DateTimeField(default=timezone.now)
+    data_conclusao = models.DateTimeField(null=True, blank=True)
 
     class Meta:
         ordering = ['-data_criacao']
@@ -77,6 +64,8 @@ class Tarefa(models.Model):
         return delta.days
 
 
+# ========== MODELOS PRINCIPAIS ==========
+
 class Crianca(models.Model):
     """
     Modelo para representar uma criança no sistema
@@ -84,40 +73,24 @@ class Crianca(models.Model):
     instituicao = models.CharField(
         max_length=200,
         verbose_name='Instituição',
-        help_text='Nome da escola/instituição da criança',
         blank=True,
         null=True
     )
     
     nome = models.CharField(
         max_length=100,
-        verbose_name='Nome',
-        help_text='Nome da criança'
+        verbose_name='Nome'
     )
     
     idade = models.IntegerField(
-        verbose_name='Idade',
-        help_text='Idade da criança em anos'
+        verbose_name='Idade'
     )
     
-    # ===== CAMPOS PARA PRÉ-FASE =====
     fase_atual = models.CharField(
         max_length=50,
         verbose_name='Fase Atual',
-        help_text='Fase atual do aluno (pre_fase, capitulo_1, capitulo_2, etc)',
-        default='pre_fase'
-    )
-    
-    progresso_pre_fase = models.IntegerField(
-        default=0,
-        verbose_name='Progresso Pré-Fase',
-        help_text='Quantidade de desafios concluídos na pré-fase'
-    )
-    
-    total_pre_fase = models.IntegerField(
-        default=5,
-        verbose_name='Total Pré-Fase',
-        help_text='Total de desafios necessários para completar a pré-fase'
+        default='pre_fase',
+        help_text='pre_fase, capitulo_1, capitulo_2, etc'
     )
     
     data_cadastro = models.DateTimeField(
@@ -133,22 +106,7 @@ class Crianca(models.Model):
     def __str__(self):
         if self.instituicao:
             return f"{self.nome} ({self.idade} anos) - {self.instituicao}"
-        else:
-            return f"{self.nome} ({self.idade} anos)"
-    
-    def completou_pre_fase(self):
-        """Verifica se o aluno completou a pré-fase"""
-        return self.progresso_pre_fase >= self.total_pre_fase
-    
-    def avancar_pre_fase(self):
-        """Avança o progresso na pré-fase"""
-        if self.progresso_pre_fase < self.total_pre_fase:
-            self.progresso_pre_fase += 1
-            if self.completou_pre_fase():
-                self.fase_atual = 'capitulo_1'
-            self.save()
-            return True
-        return False
+        return f"{self.nome} ({self.idade} anos)"
 
 
 class Sessao(models.Model):
@@ -165,7 +123,6 @@ class Sessao(models.Model):
     instituicao = models.CharField(
         max_length=200,
         verbose_name='Instituição',
-        help_text='Instituição da criança no momento da sessão',
         blank=True,
         null=True
     )
@@ -181,9 +138,11 @@ class Sessao(models.Model):
         verbose_name='Data de Fim'
     )
     
-    pontuacao = models.IntegerField(
+    pontuacao_total = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
         default=0,
-        verbose_name='Pontuação'
+        verbose_name='Pontuação Total'
     )
     
     class Meta:
@@ -192,44 +151,31 @@ class Sessao(models.Model):
         ordering = ['-data_inicio']
     
     def __str__(self):
-        if self.instituicao:
-            return f"Sessão de {self.crianca.nome} - {self.instituicao} - {self.data_inicio.strftime('%d/%m/%Y %H:%M')}"
-        else:
-            return f"Sessão de {self.crianca.nome} - {self.data_inicio.strftime('%d/%m/%Y %H:%M')}"
-    
-    def save(self, *args, **kwargs):
-        if not self.instituicao and self.crianca_id:
-            self.instituicao = self.crianca.instituicao
-        super().save(*args, **kwargs)
+        return f"Sessão de {self.crianca.nome} - {self.data_inicio.strftime('%d/%m/%Y %H:%M')}"
     
     def finalizar(self):
         self.data_fim = timezone.now()
         self.save()
 
 
-# ===== MODELOS: CAPITULO, CAMINHO, DESAFIO, INTERACAO =====
-
 class Capitulo(models.Model):
     """
-    Modelo para representar um capítulo do jogo educativo
+    Modelo para representar um capítulo
     """
     titulo = models.CharField(
         max_length=200,
-        verbose_name='Título',
-        help_text='Título do capítulo'
+        verbose_name='Título'
     )
     
     descricao = models.TextField(
         verbose_name='Descrição',
-        help_text='Descrição do capítulo',
         blank=True,
         null=True
     )
     
     ordem = models.IntegerField(
         default=0,
-        verbose_name='Ordem',
-        help_text='Ordem de exibição do capítulo'
+        verbose_name='Ordem'
     )
     
     data_criacao = models.DateTimeField(
@@ -259,34 +205,30 @@ class Caminho(models.Model):
     
     nome = models.CharField(
         max_length=200,
-        verbose_name='Nome',
-        help_text='Nome do caminho'
+        verbose_name='Nome'
     )
     
     cor = models.CharField(
         max_length=50,
         verbose_name='Cor',
-        help_text='Cor para identificação visual (ex: "vermelho", "#FF0000")',
         default='azul'
     )
     
     dificuldade = models.CharField(
         max_length=50,
         verbose_name='Dificuldade',
-        help_text='Nível de dificuldade (fácil, médio, difícil)',
         default='médio'
     )
     
     ordem = models.IntegerField(
         default=0,
-        verbose_name='Ordem',
-        help_text='Ordem de exibição do caminho'
+        verbose_name='Ordem'
     )
     
     class Meta:
         verbose_name = 'Caminho'
         verbose_name_plural = 'Caminhos'
-        ordering = ['capitulo__ordem', 'ordem', 'nome']
+        ordering = ['ordem']
     
     def __str__(self):
         return f"{self.capitulo.titulo} - {self.nome}"
@@ -310,214 +252,188 @@ class Desafio(models.Model):
     )
     
     ordem = models.IntegerField(
-        verbose_name='Ordem',
-        help_text='Ordem do desafio dentro do caminho'
+        verbose_name='Ordem'
     )
     
     tipo_pista = models.CharField(
         max_length=10,
         choices=TIPO_PISTA_CHOICES,
-        verbose_name='Tipo de Pista',
-        default='text'
+        default='text',
+        verbose_name='Tipo de Pista'
     )
     
     conteudo_pista = models.TextField(
-        verbose_name='Conteúdo da Pista',
-        help_text='Texto, URL da imagem ou áudio'
+        verbose_name='Conteúdo da Pista'
     )
     
     resposta_correta = models.CharField(
         max_length=500,
-        verbose_name='Resposta Correta',
-        help_text='Resposta esperada para o desafio'
+        verbose_name='Resposta Correta'
     )
     
     class Meta:
         verbose_name = 'Desafio'
         verbose_name_plural = 'Desafios'
-        ordering = ['caminho__ordem', 'ordem']
+        ordering = ['ordem']
         unique_together = ['caminho', 'ordem']
     
     def __str__(self):
         return f"Desafio {self.ordem} - {self.caminho.nome}"
 
 
-class Interacao(models.Model):
+# ========== NOVO MODELO: AÇÃO ==========
+
+class Acao(models.Model):
     """
-    Modelo para registrar as interações dos alunos com os desafios
+    Modelo unificado para registrar todas as ações do usuário
+    Substitui Interacao e InteracaoPreFase
     """
-    aluno = models.ForeignKey(
+    TIPO_ACAO_CHOICES = [
+        ('click', 'Clique'),
+        ('drag', 'Arrastar'),
+        ('type', 'Digitar'),
+        ('select', 'Selecionar'),
+        ('submit', 'Enviar'),
+        ('next', 'Avançar'),
+        ('back', 'Voltar'),
+        ('hint', 'Pedir Dica'),
+        ('skip', 'Pular'),
+    ]
+    
+    # Quem fez a ação
+    crianca = models.ForeignKey(
         Crianca,
         on_delete=models.CASCADE,
-        related_name='interacoes',
-        verbose_name='Aluno'
+        related_name='acoes',
+        verbose_name='Criança'
     )
     
+    # Qual a sessão
+    sessao = models.ForeignKey(
+        Sessao,
+        on_delete=models.CASCADE,
+        related_name='acoes',
+        verbose_name='Sessão',
+        null=True,
+        blank=True
+    )
+    
+    # Qual a fase (pré-fase ou capítulo)
+    fase = models.CharField(
+        max_length=50,
+        verbose_name='Fase',
+        help_text='pre_fase, capitulo_1, capitulo_2, etc'
+    )
+    
+    # Qual o desafio (opcional)
     desafio = models.ForeignKey(
         Desafio,
         on_delete=models.CASCADE,
-        related_name='interacoes',
-        verbose_name='Desafio'
+        related_name='acoes',
+        verbose_name='Desafio',
+        null=True,
+        blank=True
     )
     
-    resposta_dada = models.CharField(
-        max_length=500,
-        verbose_name='Resposta Dada',
-        help_text='Resposta fornecida pelo aluno'
+    # Sigla da ação (ex: CLI, DRA, TIP, SEL, ENV, AVN, VOL, DIC, PUL)
+    sigla = models.CharField(
+        max_length=3,
+        verbose_name='Sigla da Ação',
+        help_text='Ex: CLI (clique), DRA (arrastar), TIP (digitar), SEL (selecionar), ENV (enviar)'
     )
     
-    acertou = models.BooleanField(
-        verbose_name='Acertou?',
-        help_text='Se o aluno acertou o desafio'
-    )
-    
-    pontos = models.IntegerField(
-        default=0,
-        verbose_name='Pontos',
-        help_text='Pontuação obtida'
-    )
-    
-    created_at = models.DateTimeField(
-        auto_now_add=True,
-        verbose_name='Data/Hora'
-    )
-    
-    class Meta:
-        verbose_name = 'Interação'
-        verbose_name_plural = 'Interações'
-        ordering = ['-created_at']
-        unique_together = ['aluno', 'desafio']
-    
-    def __str__(self):
-        return f"{self.aluno.nome} - Desafio {self.desafio.id} - {'✅' if self.acertou else '❌'}"
-    
-    def calcular_pontos(self):
-        """Calcula a pontuação baseada na dificuldade do caminho"""
-        if not self.acertou:
-            return 0
-        
-        dificuldade = self.desafio.caminho.dificuldade.lower()
-        
-        tabela_pontos = {
-            'fácil': 10,
-            'facil': 10,
-            'médio': 20,
-            'medio': 20,
-            'difícil': 30,
-            'dificil': 30,
-        }
-        
-        return tabela_pontos.get(dificuldade, 10)
-    
-    def save(self, *args, **kwargs):
-        """Auto-preenche acertou e pontos"""
-        if not self.pk:
-            self.acertou = self.resposta_dada.strip().lower() == self.desafio.resposta_correta.strip().lower()
-        
-        self.pontos = self.calcular_pontos()
-        
-        super().save(*args, **kwargs)
-
-
-# ===== NOVOS MODELOS: PRÉ-FASE =====
-
-class PreFaseDesafio(models.Model):
-    """
-    Modelo para representar um desafio da pré-fase
-    (fase de nivelamento antes dos capítulos principais)
-    """
-    TIPO_PISTA_CHOICES = [
-        ('text', 'Texto'),
-        ('image', 'Imagem'),
-        ('audio', 'Áudio'),
-    ]
-    
-    ordem = models.IntegerField(
-        verbose_name='Ordem',
-        help_text='Ordem do desafio na pré-fase'
-    )
-    
-    tipo_pista = models.CharField(
+    # Tipo da ação
+    tipo = models.CharField(
         max_length=10,
-        choices=TIPO_PISTA_CHOICES,
-        verbose_name='Tipo de Pista',
-        default='text'
+        choices=TIPO_ACAO_CHOICES,
+        verbose_name='Tipo da Ação'
     )
     
-    conteudo_pista = models.TextField(
-        verbose_name='Conteúdo da Pista',
-        help_text='Texto, URL da imagem ou áudio'
-    )
-    
-    resposta_correta = models.CharField(
-        max_length=500,
-        verbose_name='Resposta Correta',
-        help_text='Resposta esperada para o desafio'
-    )
-    
-    dica = models.TextField(
-        verbose_name='Dica',
-        help_text='Dica para ajudar o aluno',
+    # Resposta do usuário
+    resposta = models.TextField(
+        verbose_name='Resposta',
+        help_text='Resposta dada pelo usuário ou ação realizada',
         blank=True,
         null=True
     )
     
-    class Meta:
-        verbose_name = 'Desafio da Pré-Fase'
-        verbose_name_plural = 'Desafios da Pré-Fase'
-        ordering = ['ordem']
-    
-    def __str__(self):
-        return f"Pré-Fase - Desafio {self.ordem}"
-
-
-class InteracaoPreFase(models.Model):
-    """
-    Modelo para registrar interações dos alunos na pré-fase
-    """
-    aluno = models.ForeignKey(
-        Crianca,
-        on_delete=models.CASCADE,
-        related_name='interacoes_pre_fase',
-        verbose_name='Aluno'
+    # Tempo de reação (em segundos)
+    tempo_reacao = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        verbose_name='Tempo de Reação (s)',
+        help_text='Tempo em segundos entre apresentação do desafio e resposta',
+        null=True,
+        blank=True
     )
     
-    desafio = models.ForeignKey(
-        PreFaseDesafio,
-        on_delete=models.CASCADE,
-        related_name='interacoes',
-        verbose_name='Desafio'
+    # Pontuação (decimal)
+    pontuacao = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=0,
+        verbose_name='Pontuação'
     )
     
-    resposta_dada = models.CharField(
-        max_length=500,
-        verbose_name='Resposta Dada'
-    )
-    
-    acertou = models.BooleanField(
-        verbose_name='Acertou?'
-    )
-    
-    tentativas = models.IntegerField(
-        default=1,
-        verbose_name='Número de Tentativas'
-    )
-    
+    # Data/hora da ação
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Data/Hora'
     )
     
     class Meta:
-        verbose_name = 'Interação Pré-Fase'
-        verbose_name_plural = 'Interações Pré-Fase'
+        verbose_name = 'Ação'
+        verbose_name_plural = 'Ações'
         ordering = ['-created_at']
-        unique_together = ['aluno', 'desafio']
     
     def __str__(self):
-        return f"{self.aluno.nome} - Pré-Fase Desafio {self.desafio.ordem} - {'✅' if self.acertou else '❌'}"
+        return f"{self.crianca.nome} - {self.get_tipo_display()} ({self.sigla}) - {self.created_at.strftime('%H:%M:%S')}"
+    
+    def calcular_pontuacao(self):
+        """Calcula pontuação baseada no tipo de ação"""
+        from decimal import Decimal
+        
+        if self.tipo == 'submit' and self.resposta and self.desafio:
+            # Se for envio de resposta, verifica se acertou
+            if self.resposta.strip().lower() == self.desafio.resposta_correta.strip().lower():
+                return Decimal('1.0')
+            return Decimal('0')
+        elif self.tipo == 'hint':
+            return Decimal('0.2')
+        elif self.tipo == 'skip':
+            return Decimal('0')
+        elif self.tipo in ['click', 'select']:
+            return Decimal('0.5')
+        
+        return Decimal('0.5')  # Pontuação padrão
     
     def save(self, *args, **kwargs):
-        if not self.pk:
-            self.acertou = self.resposta_dada.strip().lower() == self.desafio.resposta_correta.strip().lower()
+        # Gerar sigla automaticamente baseada no tipo
+        if not self.sigla:
+            siglas = {
+                'click': 'CLI',
+                'drag': 'DRA',
+                'type': 'TIP',
+                'select': 'SEL',
+                'submit': 'ENV',
+                'next': 'AVN',
+                'back': 'VOL',
+                'hint': 'DIC',
+                'skip': 'PUL',
+            }
+            self.sigla = siglas.get(self.tipo, 'OUT')
+        
+        # Calcular pontuação se não definida
+        if self.pontuacao == 0:
+            self.pontuacao = self.calcular_pontuacao()
+        
         super().save(*args, **kwargs)
+        
+        # Atualizar pontuação total da sessão
+        if self.sessao:
+            from django.db.models import Sum
+            total_pontos = Acao.objects.filter(sessao=self.sessao).aggregate(
+                total=Sum('pontuacao')
+            )['total'] or Decimal('0')
+            self.sessao.pontuacao_total = total_pontos
+            self.sessao.save()

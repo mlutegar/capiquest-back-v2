@@ -2,14 +2,41 @@ from django.urls import path
 from . import views
 
 app_name = "polls"
+
 urlpatterns = [
-    # URLs existentes para enquetes
+    # ===== URLs para AÇÕES =====
+    path("api/acoes/registrar/", views.RegistrarAcaoView.as_view(), name="api_acoes_registrar"),
+    path("api/acoes/", views.ListarAcoesView.as_view(), name="api_acoes_list"),
+    path("api/acoes/<int:pk>/", views.AcaoDetailView.as_view(), name="api_acoes_detail"),
+    
+    # ===== URLs para CRIANÇAS =====
+    path("api/criancas/", views.CriancaListView.as_view(), name="api_crianca_list"),
+    path("api/criancas/<int:pk>/", views.CriancaDetailView.as_view(), name="api_crianca_detail"),
+    
+    # ===== URLs para SESSÕES =====
+    path("api/sessoes/iniciar/", views.IniciarSessaoView.as_view(), name="api_sessao_iniciar"),
+    path("api/sessoes/", views.SessaoListView.as_view(), name="api_sessao_list"),
+    path("api/sessoes/<int:pk>/", views.SessaoDetailView.as_view(), name="api_sessao_detail"),
+    path("api/sessoes/<int:pk>/finalizar/", views.FinalizarSessaoView.as_view(), name="api_sessao_finalizar"),
+    
+    # ===== URLs para CAPÍTULOS =====
+    path("api/capitulos/", views.CapituloListView.as_view(), name="api_capitulo_list"),
+    path("api/capitulos/<int:pk>/", views.CapituloDetailView.as_view(), name="api_capitulo_detail"),
+    path("api/capitulos/<int:capitulo_id>/caminhos/", views.CapituloCaminhosView.as_view(), name="api_capitulo_caminhos"),
+    
+    # ===== URLs para CAMINHOS =====
+    path("api/caminhos/<int:caminho_id>/desafios/", views.CaminhoDesafiosView.as_view(), name="api_caminho_desafios"),
+    
+    # ===== URLs para PROGRESSÃO =====
+    path("api/progressao/<int:crianca_id>/", views.ProgressaoView.as_view(), name="api_progressao"),
+    
+    # ===== URLs para ENQUETES =====
     path("", views.IndexView.as_view(), name="index"),
     path("<int:pk>/", views.DetailView.as_view(), name="detail"),
     path("<int:pk>/results/", views.ResultsView.as_view(), name="results"),
     path("<int:question_id>/vote/", views.vote, name="vote"),
     
-    # URLs para Tarefas (frontend)
+    # ===== URLs para TAREFAS =====
     path("tarefas/", views.TarefaListView.as_view(), name="tarefa_list"),
     path("tarefas/nova/", views.TarefaCreateView.as_view(), name="tarefa_create"),
     path("tarefas/<int:pk>/", views.TarefaDetailView.as_view(), name="tarefa_detail"),
@@ -17,43 +44,7 @@ urlpatterns = [
     path("tarefas/<int:pk>/deletar/", views.TarefaDeleteView.as_view(), name="tarefa_delete"),
     path("tarefas/<int:pk>/concluir/", views.TarefaConcluirView.as_view(), name="tarefa_concluir"),
     
-    # URLs da API REST para Tarefas
+    # ===== URLs da API REST para TAREFAS =====
     path("api/tarefas/", views.TarefaListCreateAPIView.as_view(), name="api_tarefa_list_create"),
     path("api/tarefas/<int:pk>/", views.TarefaRetrieveUpdateDestroyAPIView.as_view(), name="api_tarefa_detail"),
-    
-    # URLs para Crianças e Sessões
-    path("api/sessoes/iniciar/", views.IniciarSessaoView.as_view(), name="api_sessao_iniciar"),
-    path("api/sessoes/", views.SessaoListView.as_view(), name="api_sessao_list"),
-    path("api/sessoes/<int:pk>/", views.SessaoDetailView.as_view(), name="api_sessao_detail"),
-    path("api/sessoes/<int:pk>/finalizar/", views.FinalizarSessaoView.as_view(), name="api_sessao_finalizar"),
-    
-    path("api/criancas/", views.CriancaListView.as_view(), name="api_crianca_list"),
-    path("api/criancas/<int:pk>/", views.CriancaDetailView.as_view(), name="api_crianca_detail"),
-    
-    # ===== URLs para Capítulos, Caminhos e Desafios =====
-    path("api/capitulos/", views.CapituloListView.as_view(), name="api_capitulo_list"),
-    path("api/capitulos/<int:pk>/", views.CapituloDetailView.as_view(), name="api_capitulo_detail"),
-    path("api/capitulos/<int:capitulo_id>/caminhos/", views.CapituloCaminhosView.as_view(), name="api_capitulo_caminhos"),
-    
-    path("api/caminhos/<int:caminho_id>/desafios/", views.CaminhoDesafiosView.as_view(), name="api_caminho_desafios"),
-    
-    path("api/interacoes/salvaresposta/", views.SalvarRespostaView.as_view(), name="api_salvar_resposta"),
-    
-    # ===== ENDPOINTS DE RESULTADO E RANKING =====
-    path("api/capitulos/<int:capitulo_id>/resultado/<int:aluno_id>/", 
-         views.ResultadoCapituloView.as_view(), 
-         name="api_resultado_capitulo"),
-    
-    path("api/capitulos/<int:capitulo_id>/ranking/", 
-         views.RankingCapituloView.as_view(), 
-         name="api_ranking_capitulo"),
 ]
-
-# Adicione ao final do urlpatterns:
-
-    # ===== URLs PARA PRÉ-FASE E PROGRESSÃO =====
-path("api/pre-fase/desafios/", views.PreFaseDesafioListView.as_view(), name="api_prefase_desafios"),
-path("api/pre-fase/salvaresposta/", views.SalvarRespostaPreFaseView.as_view(), name="api_prefase_salvar"),
-path("api/pre-fase/status/<int:aluno_id>/", views.StatusPreFaseView.as_view(), name="api_prefase_status"),
-    
-path("api/progressao/<int:aluno_id>/", views.ProgressaoView.as_view(), name="api_progressao"),

@@ -260,7 +260,30 @@ class SessaoDetailView(generics.RetrieveAPIView):
 # ========== VIEWS PARA AÇÕES ==========
 
 class RegistrarAcaoView(generics.CreateAPIView):
-    """POST /api/acoes/registrar/ - Registra uma nova ação do usuário"""
+    """
+    POST /api/acoes/registrar/
+    Registra uma nova ação do usuário
+    
+    Exemplo de corpo:
+    {
+        "crianca_id": 1,
+        "sessao_id": 1,
+        "fase": "capitulo_1",
+        "desafio_id": 1,
+        "tipo": "submit",
+        "resposta": "resposta_do_usuario",
+        "tempo_resposta": 3.5
+    }
+    
+    Campos:
+    - crianca_id: ID da criança (obrigatório)
+    - sessao_id: ID da sessão (opcional)
+    - fase: pre_fase, capitulo_1, etc (obrigatório)
+    - desafio_id: ID do desafio (opcional)
+    - tipo: click, drag, type, select, submit, next, back, hint, skip (obrigatório)
+    - resposta: resposta dada pelo usuário (opcional)
+    - tempo_resposta: tempo em segundos entre apresentação e resposta (opcional)
+    """
     serializer_class = RegistrarAcaoSerializer
 
 

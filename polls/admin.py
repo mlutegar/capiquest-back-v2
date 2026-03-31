@@ -129,7 +129,8 @@ class DesafioAdmin(admin.ModelAdmin):
 @admin.register(Acao)
 class AcaoAdmin(admin.ModelAdmin):
     list_display = [
-        'crianca', 'sigla', 'tipo', 'fase', 'tempo_reacao',
+        'crianca', 'sigla', 'tipo', 'fase', 
+        'tempo_reacao_formatado', 'tempo_resposta_formatado', 
         'pontuacao_formatada', 'created_at'
     ]
     list_display_links = ['crianca']
@@ -149,8 +150,12 @@ class AcaoAdmin(admin.ModelAdmin):
             'fields': ['fase', 'desafio', 'tipo', 'sigla', 'resposta'],
             'classes': ['wide']
         }),
-        ('Métrica', {
-            'fields': ['tempo_reacao', 'pontuacao'],
+        ('Métricas de Tempo', {
+            'fields': ['tempo_reacao', 'tempo_resposta'],
+            'classes': ['wide']
+        }),
+        ('Pontuação', {
+            'fields': ['pontuacao'],
             'classes': ['wide']
         }),
         ('Quando', {
@@ -158,6 +163,20 @@ class AcaoAdmin(admin.ModelAdmin):
             'classes': ['collapse']
         }),
     ]
+    
+    def tempo_reacao_formatado(self, obj):
+        if obj.tempo_reacao is not None:
+            return f"{obj.tempo_reacao:.2f}s"
+        return '-'
+    tempo_reacao_formatado.short_description = 'Tempo Reação'
+    tempo_reacao_formatado.admin_order_field = 'tempo_reacao'
+    
+    def tempo_resposta_formatado(self, obj):
+        if obj.tempo_resposta is not None:
+            return f"{obj.tempo_resposta:.2f}s"
+        return '-'
+    tempo_resposta_formatado.short_description = 'Tempo Resposta'
+    tempo_resposta_formatado.admin_order_field = 'tempo_resposta'
     
     def pontuacao_formatada(self, obj):
         return f"{obj.pontuacao:.2f}"

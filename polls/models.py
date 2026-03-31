@@ -286,7 +286,6 @@ class Desafio(models.Model):
 class Acao(models.Model):
     """
     Modelo unificado para registrar todas as ações do usuário
-    Substitui Interacao e InteracaoPreFase
     """
     TIPO_ACAO_CHOICES = [
         ('click', 'Clique'),
@@ -335,7 +334,7 @@ class Acao(models.Model):
         blank=True
     )
     
-    # Sigla da ação (ex: CLI, DRA, TIP, SEL, ENV, AVN, VOL, DIC, PUL)
+    # Sigla da ação
     sigla = models.CharField(
         max_length=3,
         verbose_name='Sigla da Ação',
@@ -357,12 +356,24 @@ class Acao(models.Model):
         null=True
     )
     
-    # Tempo de reação (em segundos)
+    # ===== CAMPOS DE TEMPO =====
+    
+    # Tempo de Reação (em segundos)
     tempo_reacao = models.DecimalField(
         max_digits=8,
         decimal_places=2,
         verbose_name='Tempo de Reação (s)',
-        help_text='Tempo em segundos entre apresentação do desafio e resposta',
+        help_text='Tempo entre o estímulo e o início da resposta do usuário',
+        null=True,
+        blank=True
+    )
+    
+    # Tempo de Resposta (em segundos)
+    tempo_resposta = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        verbose_name='Tempo de Resposta (s)',
+        help_text='Tempo total para completar a ação (inclui tempo de reação)',
         null=True,
         blank=True
     )
@@ -387,16 +398,22 @@ class Acao(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        return f"{self.crianca.nome} - {self.get_tipo_display()} ({self.sigla}) - {self.created_at.strftime('%H:%M:%S')}"
+        reacao = f" - R:{self.tempo_reacao:.2f}s" if self.tempo_reacao else ""
+        resposta = f" Rs:{self.tempo_resposta:.2f}s" if self.tempo_resposta else ""
+        return f"{self.crianca.nome} - {self.get_tipo_display()} ({self.sigla}){reacao}{resposta} - {self.created_at.strftime('%H:%M:%S')}"
     
     def calcular_pontuacao(self):
-        """Calcula pontuação baseada no tipo de ação"""
+        """Calcula pontuação baseada no tipo de ação e tempos"""
         from decimal import Decimal
         
         if self.tipo == 'submit' and self.resposta and self.desafio:
-            # Se for envio de resposta, verifica se acertou
             if self.resposta.strip().lower() == self.desafio.resposta_correta.strip().lower():
-                return Decimal('1.0')
+                # Bônus por tempo de reação rápido
+                if self.tempo_reacao and self.tempo_reacao < 1.0:
+                    return Decimal('1.5')  # Bônus máximo
+                elif self.tempo_reacao and self.tempo_reacao < 2.0:
+                    return Decimal('1.2')  # Bônus médio
+                return Decimal('1.0')  # Pontuação base
             return Decimal('0')
         elif self.tipo == 'hint':
             return Decimal('0.2')
@@ -405,7 +422,7 @@ class Acao(models.Model):
         elif self.tipo in ['click', 'select']:
             return Decimal('0.5')
         
-        return Decimal('0.5')  # Pontuação padrão
+        return Decimal('0.5')
     
     def save(self, *args, **kwargs):
         # Gerar sigla automaticamente baseada no tipo

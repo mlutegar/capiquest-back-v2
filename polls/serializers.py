@@ -77,7 +77,7 @@ class AcaoSerializer(serializers.ModelSerializer):
 
 
 class RegistrarAcaoSerializer(serializers.Serializer):
-    """Serializer para registrar uma nova ação com tempos"""
+    """Serializer para registrar uma nova ação (sem validação de resposta correta)"""
     crianca_id = serializers.IntegerField()
     sessao_id = serializers.IntegerField(required=False, allow_null=True)
     fase = serializers.CharField(max_length=50)
@@ -85,47 +85,27 @@ class RegistrarAcaoSerializer(serializers.Serializer):
     sigla = serializers.CharField(max_length=3, required=False, allow_blank=True)
     tipo = serializers.ChoiceField(choices=Acao.TIPO_ACAO_CHOICES)
     resposta = serializers.CharField(required=False, allow_blank=True)
-    
-    # Tempo de Reação (entre estímulo e início da resposta)
-    tempo_reacao = serializers.DecimalField(
-        max_digits=8,
-        decimal_places=2,
-        required=False,
-        allow_null=True,
-        help_text='Tempo em segundos entre o estímulo e o início da resposta'
-    )
-    
-    # Tempo de Resposta (tempo total para completar a ação)
-    tempo_resposta = serializers.DecimalField(
-        max_digits=8,
-        decimal_places=2,
-        required=False,
-        allow_null=True,
-        help_text='Tempo total para completar a ação'
-    )
+    tempo_reacao = serializers.DecimalField(max_digits=8, decimal_places=2, required=False, allow_null=True)
+    tempo_resposta = serializers.DecimalField(max_digits=8, decimal_places=2, required=False, allow_null=True)
     
     def validate(self, data):
-        # Valida se a criança existe
         try:
             Crianca.objects.get(pk=data['crianca_id'])
         except Crianca.DoesNotExist:
             raise serializers.ValidationError({'crianca_id': 'Criança não encontrada'})
         
-        # Valida se a sessão existe (se fornecida)
         if data.get('sessao_id'):
             try:
                 Sessao.objects.get(pk=data['sessao_id'])
             except Sessao.DoesNotExist:
                 raise serializers.ValidationError({'sessao_id': 'Sessão não encontrada'})
         
-        # Valida se o desafio existe (se for fornecido)
         if data.get('desafio_id'):
             try:
                 Desafio.objects.get(pk=data['desafio_id'])
             except Desafio.DoesNotExist:
                 raise serializers.ValidationError({'desafio_id': 'Desafio não encontrado'})
         
-        # Valida tempos (devem ser positivos)
         tempo_reacao = data.get('tempo_reacao')
         if tempo_reacao is not None and tempo_reacao < 0:
             raise serializers.ValidationError({'tempo_reacao': 'Tempo de reação não pode ser negativo'})
@@ -137,7 +117,7 @@ class RegistrarAcaoSerializer(serializers.Serializer):
         return data
     
     def create(self, validated_data):
-        acao = Acao.objects.create(
+        return Acao.objects.create(
             crianca_id=validated_data['crianca_id'],
             sessao_id=validated_data.get('sessao_id'),
             fase=validated_data['fase'],
@@ -148,47 +128,3 @@ class RegistrarAcaoSerializer(serializers.Serializer):
             tempo_reacao=validated_data.get('tempo_reacao'),
             tempo_resposta=validated_data.get('tempo_resposta'),
         )
-        
-        return acao
-    
-    def validate(self, data):
-        # Valida se a criança existe
-        try:
-            Crianca.objects.get(pk=data['crianca_id'])
-        except Crianca.DoesNotExist:
-            raise serializers.ValidationError({'crianca_id': 'Criança não encontrada'})
-        
-        # Valida se a sessão existe (se fornecida)
-        if data.get('sessao_id'):
-            try:
-                Sessao.objects.get(pk=data['sessao_id'])
-            except Sessao.DoesNotExist:
-                raise serializers.ValidationError({'sessao_id': 'Sessão não encontrada'})
-        
-        # Valida se o desafio existe (se for fornecido)
-        if data.get('desafio_id'):
-            try:
-                Desafio.objects.get(pk=data['desafio_id'])
-            except Desafio.DoesNotExist:
-                raise serializers.ValidationError({'desafio_id': 'Desafio não encontrado'})
-        
-        # Valida tempo_resposta (se fornecido, deve ser positivo)
-        tempo = data.get('tempo_resposta')
-        if tempo is not None and tempo < 0:
-            raise serializers.ValidationError({'tempo_resposta': 'Tempo de resposta não pode ser negativo'})
-        
-        return data
-    
-    def create(self, validated_data):
-        acao = Acao.objects.create(
-            crianca_id=validated_data['crianca_id'],
-            sessao_id=validated_data.get('sessao_id'),
-            fase=validated_data['fase'],
-            desafio_id=validated_data.get('desafio_id'),
-            sigla=validated_data.get('sigla', ''),
-            tipo=validated_data['tipo'],
-            resposta=validated_data.get('resposta', ''),
-            tempo_resposta=validated_data.get('tempo_resposta'),
-        )
-        
-        return acao

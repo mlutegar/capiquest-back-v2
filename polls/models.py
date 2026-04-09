@@ -237,6 +237,7 @@ class Caminho(models.Model):
 class Desafio(models.Model):
     """
     Modelo para representar um desafio dentro de um caminho
+    SEM campo resposta_correta
     """
     TIPO_PISTA_CHOICES = [
         ('text', 'Texto'),
@@ -266,10 +267,7 @@ class Desafio(models.Model):
         verbose_name='Conteúdo da Pista'
     )
     
-    resposta_correta = models.CharField(
-        max_length=500,
-        verbose_name='Resposta Correta'
-    )
+    # ===== CAMPO RESPOSTA_CORRETA REMOVIDO =====
     
     class Meta:
         verbose_name = 'Desafio'
@@ -281,7 +279,7 @@ class Desafio(models.Model):
         return f"Desafio {self.ordem} - {self.caminho.nome}"
 
 
-# ========== NOVO MODELO: AÇÃO ==========
+# ========== MODELO AÇÃO ==========
 
 class Acao(models.Model):
     """
@@ -317,7 +315,7 @@ class Acao(models.Model):
         blank=True
     )
     
-    # Qual a fase (pré-fase ou capítulo)
+    # Qual a fase
     fase = models.CharField(
         max_length=50,
         verbose_name='Fase',
@@ -338,7 +336,7 @@ class Acao(models.Model):
     sigla = models.CharField(
         max_length=3,
         verbose_name='Sigla da Ação',
-        help_text='Ex: CLI (clique), DRA (arrastar), TIP (digitar), SEL (selecionar), ENV (enviar)'
+        help_text='Ex: CLI, DRA, TIP, SEL, ENV, AVN, VOL, DIC, PUL'
     )
     
     # Tipo da ação
@@ -356,14 +354,12 @@ class Acao(models.Model):
         null=True
     )
     
-    # ===== CAMPOS DE TEMPO =====
-    
     # Tempo de Reação (em segundos)
     tempo_reacao = models.DecimalField(
         max_digits=8,
         decimal_places=2,
         verbose_name='Tempo de Reação (s)',
-        help_text='Tempo entre o estímulo e o início da resposta do usuário',
+        help_text='Tempo entre o estímulo e o início da resposta',
         null=True,
         blank=True
     )
@@ -373,12 +369,12 @@ class Acao(models.Model):
         max_digits=8,
         decimal_places=2,
         verbose_name='Tempo de Resposta (s)',
-        help_text='Tempo total para completar a ação (inclui tempo de reação)',
+        help_text='Tempo total para completar a ação',
         null=True,
         blank=True
     )
     
-    # Pontuação (decimal)
+    # Pontuação
     pontuacao = models.DecimalField(
         max_digits=8,
         decimal_places=2,
@@ -386,7 +382,7 @@ class Acao(models.Model):
         verbose_name='Pontuação'
     )
     
-    # Data/hora da ação
+    # Data/hora
     created_at = models.DateTimeField(
         auto_now_add=True,
         verbose_name='Data/Hora'
@@ -398,34 +394,57 @@ class Acao(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        reacao = f" - R:{self.tempo_reacao:.2f}s" if self.tempo_reacao else ""
+        reacao = f" R:{self.tempo_reacao:.2f}s" if self.tempo_reacao else ""
         resposta = f" Rs:{self.tempo_resposta:.2f}s" if self.tempo_resposta else ""
-        return f"{self.crianca.nome} - {self.get_tipo_display()} ({self.sigla}){reacao}{resposta} - {self.created_at.strftime('%H:%M:%S')}"
+        return f"{self.crianca.nome} - {self.get_tipo_display()} ({self.sigla}){reacao}{resposta}"
     
     def calcular_pontuacao(self):
-        """Calcula pontuação baseada no tipo de ação e tempos"""
+        """
+        Calcula pontuação baseada apenas no tipo de ação e tempos
+        NÃO verifica se a resposta está correta
+        """
         from decimal import Decimal
         
-        if self.tipo == 'submit' and self.resposta and self.desafio:
-            if self.resposta.strip().lower() == self.desafio.resposta_correta.strip().lower():
-                # Bônus por tempo de reação rápido
-                if self.tempo_reacao and self.tempo_reacao < 1.0:
-                    return Decimal('1.5')  # Bônus máximo
-                elif self.tempo_reacao and self.tempo_reacao < 2.0:
-                    return Decimal('1.2')  # Bônus médio
-                return Decimal('1.0')  # Pontuação base
-            return Decimal('0')
+        if self.tipo == 'submit':
+            # Pontuação baseada no tempo de reação
+            if self.tempo_reacao and self.tempo_reacao < 1.0:
+                return Decimal('1.5')
+            elif self.tempo_reacao and self.tempo_reacao < 2.0:
+                return Decimal('1.2')
+            elif self.tempo_reacao and self.tempo_reacao < 3.0:
+                return Decimal('1.0')
+            else:
+                return Decimal('0.8')
+        
         elif self.tipo == 'hint':
             return Decimal('0.2')
+        
         elif self.tipo == 'skip':
             return Decimal('0')
-        elif self.tipo in ['click', 'select']:
+        
+        elif self.tipo == 'click':
+            return Decimal('0.3')
+        
+        elif self.tipo == 'select':
+            return Decimal('0.4')
+        
+        elif self.tipo == 'type':
+            if self.resposta and len(self.resposta) > 10:
+                return Decimal('0.8')
             return Decimal('0.5')
         
-        return Decimal('0.5')
+        elif self.tipo == 'drag':
+            return Decimal('0.6')
+        
+        elif self.tipo == 'next':
+            return Decimal('0.1')
+        
+        elif self.tipo == 'back':
+            return Decimal('0.05')
+        
+        return Decimal('0.3')
     
     def save(self, *args, **kwargs):
-        # Gerar sigla automaticamente baseada no tipo
         if not self.sigla:
             siglas = {
                 'click': 'CLI',
@@ -440,13 +459,11 @@ class Acao(models.Model):
             }
             self.sigla = siglas.get(self.tipo, 'OUT')
         
-        # Calcular pontuação se não definida
         if self.pontuacao == 0:
             self.pontuacao = self.calcular_pontuacao()
         
         super().save(*args, **kwargs)
         
-        # Atualizar pontuação total da sessão
         if self.sessao:
             from django.db.models import Sum
             total_pontos = Acao.objects.filter(sessao=self.sessao).aggregate(

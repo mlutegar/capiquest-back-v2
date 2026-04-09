@@ -6,8 +6,6 @@ from .models import (
 )
 
 
-# ========== ADMIN PARA ENQUETES ==========
-
 class ChoiceInline(admin.TabularInline):
     model = Choice
     extra = 3
@@ -32,8 +30,6 @@ class ChoiceAdmin(admin.ModelAdmin):
     search_fields = ['choice_text']
 
 
-# ========== ADMIN PARA TAREFAS ==========
-
 @admin.register(Tarefa)
 class TarefaAdmin(admin.ModelAdmin):
     list_display = ['titulo', 'concluida', 'data_criacao', 'data_conclusao']
@@ -52,8 +48,6 @@ class TarefaAdmin(admin.ModelAdmin):
     marcar_como_pendentes.short_description = "⏳ Marcar como pendentes"
 
 
-# ========== ADMIN PARA CRIANÇAS ==========
-
 @admin.register(Crianca)
 class CriancaAdmin(admin.ModelAdmin):
     list_display = ['nome', 'idade', 'instituicao', 'fase_atual', 'data_cadastro']
@@ -62,8 +56,6 @@ class CriancaAdmin(admin.ModelAdmin):
     date_hierarchy = 'data_cadastro'
     list_editable = ['idade', 'instituicao']
 
-
-# ========== ADMIN PARA SESSÕES ==========
 
 @admin.register(Sessao)
 class SessaoAdmin(admin.ModelAdmin):
@@ -83,8 +75,6 @@ class SessaoAdmin(admin.ModelAdmin):
         return "Em andamento"
     duracao.short_description = 'Duração'
 
-
-# ========== ADMIN PARA CAPÍTULOS, CAMINHOS E DESAFIOS ==========
 
 @admin.register(Capitulo)
 class CapituloAdmin(admin.ModelAdmin):
@@ -115,7 +105,13 @@ class DesafioAdmin(admin.ModelAdmin):
     list_editable = ['ordem']
     list_display_links = ['tipo_pista']
     list_filter = ['tipo_pista', 'caminho__capitulo']
-    search_fields = ['conteudo_pista', 'resposta_correta']
+    search_fields = ['conteudo_pista']
+    
+    fieldsets = [
+        ('Relação', {'fields': ['caminho']}),
+        ('Configuração', {'fields': ['ordem', 'tipo_pista']}),
+        ('Conteúdo', {'fields': ['conteudo_pista']}),
+    ]
     
     def conteudo_resumido(self, obj):
         if obj.conteudo_pista and len(obj.conteudo_pista) > 50:
@@ -123,8 +119,6 @@ class DesafioAdmin(admin.ModelAdmin):
         return obj.conteudo_pista or '-'
     conteudo_resumido.short_description = 'Conteúdo'
 
-
-# ========== ADMIN PARA AÇÕES ==========
 
 @admin.register(Acao)
 class AcaoAdmin(admin.ModelAdmin):
@@ -142,26 +136,11 @@ class AcaoAdmin(admin.ModelAdmin):
     list_per_page = 30
     
     fieldsets = [
-        ('Quem', {
-            'fields': ['crianca', 'sessao'],
-            'classes': ['wide']
-        }),
-        ('O que', {
-            'fields': ['fase', 'desafio', 'tipo', 'sigla', 'resposta'],
-            'classes': ['wide']
-        }),
-        ('Métricas de Tempo', {
-            'fields': ['tempo_reacao', 'tempo_resposta'],
-            'classes': ['wide']
-        }),
-        ('Pontuação', {
-            'fields': ['pontuacao'],
-            'classes': ['wide']
-        }),
-        ('Quando', {
-            'fields': ['created_at'],
-            'classes': ['collapse']
-        }),
+        ('Quem', {'fields': ['crianca', 'sessao']}),
+        ('O que', {'fields': ['fase', 'desafio', 'tipo', 'sigla', 'resposta']}),
+        ('Métricas de Tempo', {'fields': ['tempo_reacao', 'tempo_resposta']}),
+        ('Pontuação', {'fields': ['pontuacao']}),
+        ('Quando', {'fields': ['created_at'], 'classes': ['collapse']}),
     ]
     
     def tempo_reacao_formatado(self, obj):
@@ -169,16 +148,13 @@ class AcaoAdmin(admin.ModelAdmin):
             return f"{obj.tempo_reacao:.2f}s"
         return '-'
     tempo_reacao_formatado.short_description = 'Tempo Reação'
-    tempo_reacao_formatado.admin_order_field = 'tempo_reacao'
     
     def tempo_resposta_formatado(self, obj):
         if obj.tempo_resposta is not None:
             return f"{obj.tempo_resposta:.2f}s"
         return '-'
     tempo_resposta_formatado.short_description = 'Tempo Resposta'
-    tempo_resposta_formatado.admin_order_field = 'tempo_resposta'
     
     def pontuacao_formatada(self, obj):
         return f"{obj.pontuacao:.2f}"
     pontuacao_formatada.short_description = 'Pontuação'
-    pontuacao_formatada.admin_order_field = 'pontuacao'

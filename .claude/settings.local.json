@@ -6,7 +6,8 @@
       "Bash(timeout:*)",
       "Bash(sqlite3:*)",
       "Bash(test:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(env)"
     ]
   }
 }

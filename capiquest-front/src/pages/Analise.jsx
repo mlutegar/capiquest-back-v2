@@ -32,7 +32,7 @@ const Analise = () => {
     setErro(null);
 
     try {
-      let url = 'http://127.0.0.1:8030/polls/api/analise/dados-gerais/';
+      let url = 'http://127.0.0.1:8075/polls/api/analise/dados-gerais/';
 
       if (criancaSelecionada)
         url += `?crianca_id=${criancaSelecionada}`;

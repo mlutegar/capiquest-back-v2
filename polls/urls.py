@@ -47,11 +47,8 @@ urlpatterns = [
     # Tarefas (API)
     path("api/tarefas/", views.TarefaListCreateAPIView.as_view(), name="api_tarefa_list_create"),
     path("api/tarefas/<int:pk>/", views.TarefaRetrieveUpdateDestroyAPIView.as_view(), name="api_tarefa_detail"),
-]
 
-from django.urls import path
-from . import views_analise
-urlpatterns = [
+    # Análise
     path('api/analise/dados-gerais/', views_analise.AnaliseDadosGerais.as_view(), name='api_analise_dados_gerais'),
     path('api/analise/criancas/', views_analise.ListaCriancasParaAnalise.as_view(), name='api_analise_criancas'),
 ]

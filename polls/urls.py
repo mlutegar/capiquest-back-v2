@@ -1,6 +1,10 @@
 from django.urls import path
+<<<<<<< HEAD
 from . import views
 from . import views_analise
+=======
+from . import views, views_analise
+>>>>>>> a57a504738ab8dba3031a902aca876e19fb997f8
 
 app_name = "polls"
 
@@ -48,8 +52,13 @@ urlpatterns = [
     # Tarefas (API)
     path("api/tarefas/", views.TarefaListCreateAPIView.as_view(), name="api_tarefa_list_create"),
     path("api/tarefas/<int:pk>/", views.TarefaRetrieveUpdateDestroyAPIView.as_view(), name="api_tarefa_detail"),
+<<<<<<< HEAD
     
     # Análise (API)
+=======
+
+    # Análise
+>>>>>>> a57a504738ab8dba3031a902aca876e19fb997f8
     path('api/analise/dados-gerais/', views_analise.AnaliseDadosGerais.as_view(), name='api_analise_dados_gerais'),
     path('api/analise/criancas/', views_analise.ListaCriancasParaAnalise.as_view(), name='api_analise_criancas'),
 ]

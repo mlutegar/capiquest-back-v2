@@ -21,7 +21,7 @@ const Analise = () => {
   }, [criancaSelecionada]);
 
   const carregarCriancas = async () => {
-    const response = await fetch('http://127.0.0.1:8030/polls/api/analise/criancas/');
+    const response = await fetch('http://127.0.0.1:8000/polls/api/analise/criancas/');
     const data = await response.json();
     setCriancas(data);
   };
@@ -32,7 +32,7 @@ const Analise = () => {
     setErro(null);
 
     try {
-      let url = 'http://127.0.0.1:8030/polls/api/analise/dados-gerais/';
+      let url = 'http://127.0.0.1:8000/polls/api/analise/dados-gerais/';
 
       if (criancaSelecionada)
         url += `?crianca_id=${criancaSelecionada}`;

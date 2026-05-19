@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import views_analise
 
 app_name = "polls"
 
@@ -20,7 +21,7 @@ urlpatterns = [
     path("api/sessoes/<int:pk>/finalizar/", views.FinalizarSessaoView.as_view(), name="api_sessao_finalizar"),
     
     # Capítulos
-    path("api/capitulos/", views.CapituloListView.as_view(), name="api_capitulo_list"),
+    path("api/capitulos/", views.CapituloListView.as_view(), name="api_capitulo_list"),  # <-- ESTA É A ROTA QUE VOCÊ QUER
     path("api/capitulos/<int:pk>/", views.CapituloDetailView.as_view(), name="api_capitulo_detail"),
     path("api/capitulos/<int:capitulo_id>/caminhos/", views.CapituloCaminhosView.as_view(), name="api_capitulo_caminhos"),
     
@@ -47,11 +48,8 @@ urlpatterns = [
     # Tarefas (API)
     path("api/tarefas/", views.TarefaListCreateAPIView.as_view(), name="api_tarefa_list_create"),
     path("api/tarefas/<int:pk>/", views.TarefaRetrieveUpdateDestroyAPIView.as_view(), name="api_tarefa_detail"),
-]
-
-from django.urls import path
-from . import views_analise
-urlpatterns = [
+    
+    # Análise (API)
     path('api/analise/dados-gerais/', views_analise.AnaliseDadosGerais.as_view(), name='api_analise_dados_gerais'),
     path('api/analise/criancas/', views_analise.ListaCriancasParaAnalise.as_view(), name='api_analise_criancas'),
 ]

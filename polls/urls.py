@@ -1,10 +1,6 @@
 from django.urls import path
-<<<<<<< HEAD
 from . import views
 from . import views_analise
-=======
-from . import views, views_analise
->>>>>>> a57a504738ab8dba3031a902aca876e19fb997f8
 
 app_name = "polls"
 
@@ -13,34 +9,46 @@ urlpatterns = [
     path("api/acoes/registrar/", views.RegistrarAcaoView.as_view(), name="api_acoes_registrar"),
     path("api/acoes/", views.ListarAcoesView.as_view(), name="api_acoes_list"),
     path("api/acoes/<int:pk>/", views.AcaoDetailView.as_view(), name="api_acoes_detail"),
-    
+
     # Crianças
     path("api/criancas/", views.CriancaListView.as_view(), name="api_crianca_list"),
     path("api/criancas/<int:pk>/", views.CriancaDetailView.as_view(), name="api_crianca_detail"),
-    
+
     # Sessões
     path("api/sessoes/iniciar/", views.IniciarSessaoView.as_view(), name="api_sessao_iniciar"),
     path("api/sessoes/", views.SessaoListView.as_view(), name="api_sessao_list"),
     path("api/sessoes/<int:pk>/", views.SessaoDetailView.as_view(), name="api_sessao_detail"),
     path("api/sessoes/<int:pk>/finalizar/", views.FinalizarSessaoView.as_view(), name="api_sessao_finalizar"),
-    
+
     # Capítulos
-    path("api/capitulos/", views.CapituloListView.as_view(), name="api_capitulo_list"),  # <-- ESTA É A ROTA QUE VOCÊ QUER
+    path("api/capitulos/", views.CapituloListView.as_view(), name="api_capitulo_list"),
     path("api/capitulos/<int:pk>/", views.CapituloDetailView.as_view(), name="api_capitulo_detail"),
-    path("api/capitulos/<int:capitulo_id>/caminhos/", views.CapituloCaminhosView.as_view(), name="api_capitulo_caminhos"),
-    
+    path(
+        "api/capitulos/<int:capitulo_id>/caminhos/",
+        views.CapituloCaminhosView.as_view(),
+        name="api_capitulo_caminhos"
+    ),
+
     # Caminhos
-    path("api/caminhos/<int:caminho_id>/desafios/", views.CaminhoDesafiosView.as_view(), name="api_caminho_desafios"),
-    
+    path(
+        "api/caminhos/<int:caminho_id>/desafios/",
+        views.CaminhoDesafiosView.as_view(),
+        name="api_caminho_desafios"
+    ),
+
     # Progressão
-    path("api/progressao/<int:crianca_id>/", views.ProgressaoView.as_view(), name="api_progressao"),
-    
+    path(
+        "api/progressao/<int:crianca_id>/",
+        views.ProgressaoView.as_view(),
+        name="api_progressao"
+    ),
+
     # Enquetes (frontend)
     path("", views.IndexView.as_view(), name="index"),
     path("<int:pk>/", views.DetailView.as_view(), name="detail"),
     path("<int:pk>/results/", views.ResultsView.as_view(), name="results"),
     path("<int:question_id>/vote/", views.vote, name="vote"),
-    
+
     # Tarefas (frontend)
     path("tarefas/", views.TarefaListView.as_view(), name="tarefa_list"),
     path("tarefas/nova/", views.TarefaCreateView.as_view(), name="tarefa_create"),
@@ -48,17 +56,23 @@ urlpatterns = [
     path("tarefas/<int:pk>/editar/", views.TarefaUpdateView.as_view(), name="tarefa_edit"),
     path("tarefas/<int:pk>/deletar/", views.TarefaDeleteView.as_view(), name="tarefa_delete"),
     path("tarefas/<int:pk>/concluir/", views.TarefaConcluirView.as_view(), name="tarefa_concluir"),
-    
-    # Tarefas (API)
-    path("api/tarefas/", views.TarefaListCreateAPIView.as_view(), name="api_tarefa_list_create"),
-    path("api/tarefas/<int:pk>/", views.TarefaRetrieveUpdateDestroyAPIView.as_view(), name="api_tarefa_detail"),
-<<<<<<< HEAD
-    
-    # Análise (API)
-=======
 
-    # Análise
->>>>>>> a57a504738ab8dba3031a902aca876e19fb997f8
-    path('api/analise/dados-gerais/', views_analise.AnaliseDadosGerais.as_view(), name='api_analise_dados_gerais'),
-    path('api/analise/criancas/', views_analise.ListaCriancasParaAnalise.as_view(), name='api_analise_criancas'),
+    # Tarefas (API)
+    path(
+        "api/tarefas/",
+        views.TarefaListCreateAPIView.as_view(),
+        name="api_tarefa_list_create"
+    ),
+    path(
+        "api/tarefas/<int:pk>/",
+        views.TarefaRetrieveUpdateDestroyAPIView.as_view(),
+        name="api_tarefa_detail"
+    ),
+
+    # ANÁLISE
+    path(
+        "analise/",
+        views_analise.pagina_analise,
+        name="analise"
+    ),
 ]

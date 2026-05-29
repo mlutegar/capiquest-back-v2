@@ -1,0 +1,173 @@
+{% extends "polls/base.html" %}
+{% load static %}
+
+{% block title %}Análise{% endblock %}
+
+{% block conteudo %}
+
+<div class="container-fluid px-4">
+
+    <h1 class="mt-4">Análise</h1>
+
+    <div class="row mb-4">
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6>Total de Registros</h6>
+                    <h2 id="total-registros">{{ total_registros }}</h2>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6>Média Geral</h6>
+                    <h2 id="media-geral">{{ media_geral }}</h2>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="row">
+
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    Gráfico de Análise
+                </div>
+                <div class="card-body" style="height: 400px;">
+                    <canvas id="graficoAnalise"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    Resumo
+                </div>
+
+                <div class="card-body">
+
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Categoria</th>
+                                <th>Quantidade</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for item in resumo %}
+                            <tr>
+                                <td>{{ item.nome }}</td>
+                                <td>{{ item.total }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="2" class="text-center">
+                                    Nenhum dado encontrado.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+
+                    </table>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+
+            <div class="card shadow-sm">
+
+                <div class="card-header">
+                    Detalhamento
+                </div>
+
+                <div class="card-body">
+
+                    <table class="table table-hover">
+
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Descrição</th>
+                                <th>Valor</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for registro in registros %}
+                            <tr>
+                                <td>{{ registro.data }}</td>
+                                <td>{{ registro.descricao }}</td>
+                                <td>{{ registro.valor }}</td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="3" class="text-center">
+                                    Nenhum registro encontrado.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}
+
+
+{% block scripts %}
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{{ resumo|json_script:"resumo-data" }}
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const resumo = JSON.parse(
+        document.getElementById('resumo-data').textContent
+    );
+
+    const ctx = document.getElementById('graficoAnalise');
+
+    if (!ctx || !resumo.length) return;
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: resumo.map(item => item.nome),
+            datasets: [{
+                label: 'Quantidade',
+                data: resumo.map(item => item.total),
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+
+});
+</script>
+
+{% endblock %}

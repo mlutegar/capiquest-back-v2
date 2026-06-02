@@ -471,3 +471,10 @@ class Acao(models.Model):
             )['total'] or Decimal('0')
             self.sessao.pontuacao_total = total_pontos
             self.sessao.save()
+
+class Resultado(models.Model):
+    titulo = models.CharField(max_length=200)
+    valor = models.FloatField()
+
+    def __str__(self):
+        return self.titulo

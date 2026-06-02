@@ -3,171 +3,202 @@
 
 {% block title %}Análise{% endblock %}
 
-{% block conteudo %}
+{% block content %}
 
-<div class="container-fluid px-4">
+<div class="container mt-4">
 
-    <h1 class="mt-4">Análise</h1>
+    <h2 class="mb-4">Análise</h2>
 
-    <div class="row mb-4">
+    <form method="get" class="mb-4">
 
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <h6>Total de Registros</h6>
-                    <h2 id="total-registros">{{ total_registros }}</h2>
-                </div>
-            </div>
-        </div>
+        <label for="crianca_id" class="form-label">
+            Selecionar Criança
+        </label>
 
-        <div class="col-md-3">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <h6>Média Geral</h6>
-                    <h2 id="media-geral">{{ media_geral }}</h2>
-                </div>
-            </div>
-        </div>
+        <select name="crianca">
+    <option value="">Selecione uma criança</option>
 
-    </div>
+    {% for crianca in criancas %}
+        <option value="{{ crianca.id }}">
+            {{ crianca.nome }}
+        </option>
+    {% endfor %}
+        </select>
+
+        <button
+            type="submit"
+            class="btn btn-primary mt-3"
+        >
+            Filtrar
+        </button>
+
+    </form>
+
 
     <div class="row">
 
-        <div class="col-md-6">
+        <div class="col-md-12 mb-4">
             <div class="card shadow-sm">
-                <div class="card-header">
-                    Gráfico de Análise
-                </div>
-                <div class="card-body" style="height: 400px;">
-                    <canvas id="graficoAnalise"></canvas>
-                </div>
-            </div>
-        </div>
 
-        <div class="col-md-6">
-            <div class="card shadow-sm">
                 <div class="card-header">
-                    Resumo
+                    Tempo de Reação por Tentativa
                 </div>
 
                 <div class="card-body">
-
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Categoria</th>
-                                <th>Quantidade</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            {% for item in resumo %}
-                            <tr>
-                                <td>{{ item.nome }}</td>
-                                <td>{{ item.total }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="2" class="text-center">
-                                    Nenhum dado encontrado.
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-
-                    </table>
-
+                    <canvas id="graficoSerie"></canvas>
                 </div>
+
             </div>
         </div>
 
-    </div>
 
-    <div class="row mt-4">
-        <div class="col-12">
-
+        <div class="col-md-6 mb-4">
             <div class="card shadow-sm">
 
                 <div class="card-header">
-                    Detalhamento
+                    Pontuação Média por Tipo de Ação
                 </div>
 
                 <div class="card-body">
-
-                    <table class="table table-hover">
-
-                        <thead>
-                            <tr>
-                                <th>Data</th>
-                                <th>Descrição</th>
-                                <th>Valor</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-                            {% for registro in registros %}
-                            <tr>
-                                <td>{{ registro.data }}</td>
-                                <td>{{ registro.descricao }}</td>
-                                <td>{{ registro.valor }}</td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="3" class="text-center">
-                                    Nenhum registro encontrado.
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-
-                    </table>
-
+                    <canvas id="graficoPontuacao"></canvas>
                 </div>
 
             </div>
-
         </div>
+
+
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+
+                <div class="card-header">
+                    Distribuição por Faixa de Tempo
+                </div>
+
+                <div class="card-body">
+                    <canvas id="graficoDistribuicao"></canvas>
+                </div>
+
+            </div>
+        </div>
+
     </div>
 
 </div>
 
+{{ tempo_reacao_serie_json|json_script:"serie-data" }}
+{{ pontuacao_por_tipo_json|json_script:"pontuacao-data" }}
+{{ distribuicao_json|json_script:"distribuicao-data" }}
+
 {% endblock %}
 
 
-{% block scripts %}
+{% block extra_js %}
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-{{ resumo|json_script:"resumo-data" }}
-
 <script>
+
 document.addEventListener('DOMContentLoaded', function () {
 
-    const resumo = JSON.parse(
-        document.getElementById('resumo-data').textContent
+    const serie = JSON.parse(
+        document.getElementById('serie-data').textContent
     );
 
-    const ctx = document.getElementById('graficoAnalise');
+    const pontuacao = JSON.parse(
+        document.getElementById('pontuacao-data').textContent
+    );
 
-    if (!ctx || !resumo.length) return;
+    const distribuicao = JSON.parse(
+        document.getElementById('distribuicao-data').textContent
+    );
 
-    new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: resumo.map(item => item.nome),
-            datasets: [{
-                label: 'Quantidade',
-                data: resumo.map(item => item.total),
-                borderWidth: 1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false
-        }
-    });
+
+
+    if (
+        document.getElementById('graficoSerie')
+        && serie.length > 0
+    ) {
+
+        new Chart(
+            document.getElementById('graficoSerie'),
+            {
+                type: 'line',
+                data: {
+                    labels: serie.map(item => item.tentativa),
+                    datasets: [{
+                        label: 'Tempo de Reação',
+                        data: serie.map(item => item.tempo_reacao),
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true
+                }
+            }
+        );
+
+    }
+
+
+
+    if (
+        document.getElementById('graficoPontuacao')
+        && pontuacao.length > 0
+    ) {
+
+        new Chart(
+            document.getElementById('graficoPontuacao'),
+            {
+                type: 'bar',
+                data: {
+                    labels: pontuacao.map(item => item.tipo_acao),
+                    datasets: [{
+                        label: 'Pontuação Média',
+                        data: pontuacao.map(
+                            item => item.pontuacao_media
+                        ),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true
+                }
+            }
+        );
+
+    }
+
+
+
+    if (
+        document.getElementById('graficoDistribuicao')
+        && distribuicao.length > 0
+    ) {
+
+        new Chart(
+            document.getElementById('graficoDistribuicao'),
+            {
+                type: 'bar',
+                data: {
+                    labels: distribuicao.map(item => item.faixa),
+                    datasets: [{
+                        label: 'Quantidade',
+                        data: distribuicao.map(
+                            item => item.quantidade
+                        ),
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true
+                }
+            }
+        );
+
+    }
 
 });
+
 </script>
 
 {% endblock %}

@@ -1,204 +1,562 @@
 {% extends "polls/base.html" %}
 {% load static %}
 
-{% block title %}Análise{% endblock %}
+{% block title %}Análise de Desempenho{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 20px;
+        color: white;
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        margin-bottom: 30px;
+        transition: all 0.3s ease;
+    }
+    
+    .chart-container:hover {
+        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+    }
+    
+    .chart-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #2d3748;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 3px solid #667eea;
+        display: inline-block;
+    }
+    
+    .select-custom {
+        border-radius: 12px;
+        border: 2px solid #e2e8f0;
+        padding: 10px 15px;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .select-custom:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        outline: none;
+    }
+    
+    .btn-primary-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        border-radius: 12px;
+        padding: 10px 30px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 50px;
+        background: white;
+        border-radius: 20px;
+        color: #a0aec0;
+    }
+    
+    canvas {
+        max-height: 300px;
+        width: 100% !important;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .fade-in {
+        animation: fadeIn 0.6s ease-out;
+    }
+    
+    .debug-info {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 10px;
+        margin-top: 10px;
+        font-size: 12px;
+        display: none;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-
-<div class="container mt-4">
-
-    <h2 class="mb-4">Análise</h2>
-
-    <form method="get" class="mb-4">
-
-        <label for="crianca_id" class="form-label">
-            Selecionar Criança
-        </label>
-
-        <select name="crianca">
-    <option value="">Selecione uma criança</option>
-
-    {% for crianca in criancas %}
-        <option value="{{ crianca.id }}">
-            {{ crianca.nome }}
-        </option>
-    {% endfor %}
-        </select>
-
-        <button
-            type="submit"
-            class="btn btn-primary mt-3"
-        >
-            Filtrar
-        </button>
-
-    </form>
-
-
-    <div class="row">
-
-        <div class="col-md-12 mb-4">
-            <div class="card shadow-sm">
-
-                <div class="card-header">
-                    Tempo de Reação por Tentativa
-                </div>
-
-                <div class="card-body">
-                    <canvas id="graficoSerie"></canvas>
-                </div>
-
-            </div>
-        </div>
-
-
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm">
-
-                <div class="card-header">
-                    Pontuação Média por Tipo de Ação
-                </div>
-
-                <div class="card-body">
-                    <canvas id="graficoPontuacao"></canvas>
-                </div>
-
-            </div>
-        </div>
-
-
-        <div class="col-md-6 mb-4">
-            <div class="card shadow-sm">
-
-                <div class="card-header">
-                    Distribuição por Faixa de Tempo
-                </div>
-
-                <div class="card-body">
-                    <canvas id="graficoDistribuicao"></canvas>
-                </div>
-
-            </div>
-        </div>
-
+<div class="container mt-4 fade-in">
+    
+    <!-- Header -->
+    <div class="mb-4">
+        <h2 class="display-6" style="color: #2d3748; font-weight: 700;">
+            📊 Análise de Desempenho
+        </h2>
+        {% if crianca_nome %}
+        <p class="text-muted">Visualizando dados de: <strong>{{ crianca_nome }}</strong></p>
+        {% endif %}
     </div>
-
+    
+    <!-- Filtro -->
+    <div class="chart-container">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-8">
+                <label for="crianca" class="form-label fw-semibold">
+                    👤 Selecionar Criança
+                </label>
+                <select name="crianca" id="crianca" class="form-select select-custom">
+                    <option value="">Selecione uma criança</option>
+                    {% for crianca in criancas %}
+                    <option value="{{ crianca.id }}" {% if crianca.id|stringformat:"s" == crianca_id_selecionada %}selected{% endif %}>
+                        {{ crianca.nome }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary-custom w-100">
+                    🔍 Analisar
+                </button>
+            </div>
+        </form>
+    </div>
+    
+    {% if has_data and estatisticas_gerais.total_acoes > 0 %}
+    
+    <!-- Cards de Estatísticas -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <div class="stat-value">{{ estatisticas_gerais.total_acoes }}</div>
+                <div class="stat-label">Total de Ações</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                <div class="stat-value">{{ estatisticas_gerais.tempo_medio }}s</div>
+                <div class="stat-label">Tempo Médio de Reação</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <div class="stat-value">{{ estatisticas_gerais.pontuacao_media }} pts</div>
+                <div class="stat-label">Pontuação Média</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                <div class="stat-value">{{ estatisticas_gerais.taxa_acertos }}%</div>
+                <div class="stat-label">Taxa de Acertos</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Gráfico Espectral -->
+    <div class="chart-container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="chart-title">
+                🌈 Análise Espectral
+            </h5>
+            <span class="badge bg-info">Análise de Fourier</span>
+        </div>
+        <canvas id="graficoEspectral" style="height: 350px; width: 100%;"></canvas>
+        <small class="text-muted mt-2 d-block">
+            Análise de frequência dos padrões de resposta usando Transformada Rápida de Fourier
+        </small>
+    </div>
+    
+    <!-- Grid de Gráficos -->
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="chart-container">
+                <h5 class="chart-title">
+                    📈 Evolução do Tempo de Reação
+                </h5>
+                <canvas id="graficoSerie" style="height: 350px; width: 100%;"></canvas>
+                <div class="mt-2">
+                    <small class="text-muted">
+                        ⏱️ Mínimo: {{ estatisticas_gerais.tempo_minimo }}s | 
+                        Máximo: {{ estatisticas_gerais.tempo_maximo }}s | 
+                        Desvio Padrão: {{ estatisticas_gerais.desvio_padrao }}s
+                    </small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-5">
+            <div class="chart-container">
+                <h5 class="chart-title">
+                    🎯 Pontuação por Tipo de Ação
+                </h5>
+                <canvas id="graficoPontuacao" style="height: 350px; width: 100%;"></canvas>
+            </div>
+        </div>
+        
+        <div class="col-lg-12">
+            <div class="chart-container">
+                <h5 class="chart-title">
+                    📊 Distribuição por Tempo de Resposta
+                </h5>
+                <canvas id="graficoDistribuicao" style="height: 300px; width: 100%;"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    {% elif crianca_id_selecionada %}
+    <div class="empty-state">
+        <i class="fas fa-chart-line fa-3x mb-3"></i>
+        <h5>Nenhum dado encontrado</h5>
+        <p>Não há registros de atividades para esta criança ainda.</p>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <i class="fas fa-child fa-3x mb-3"></i>
+        <h5>Selecione uma criança</h5>
+        <p>Escolha uma criança no filtro acima para visualizar os dados de análise.</p>
+    </div>
+    {% endif %}
+    
 </div>
 
-{{ tempo_reacao_serie_json|json_script:"serie-data" }}
-{{ pontuacao_por_tipo_json|json_script:"pontuacao-data" }}
-{{ distribuicao_json|json_script:"distribuicao-data" }}
+<!-- Dados JSON -->
+<script id="serie-data" type="application/json">
+{{ tempo_reacao_serie_json|safe }}
+</script>
+<script id="pontuacao-data" type="application/json">
+{{ pontuacao_por_tipo_json|safe }}
+</script>
+<script id="distribuicao-data" type="application/json">
+{{ distribuicao_json|safe }}
+</script>
+<script id="espectral-data" type="application/json">
+{{ dados_espectrais_json|safe }}
+</script>
 
 {% endblock %}
 
-
 {% block extra_js %}
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <script>
+// Função de logging para debug
+function logDebug(message, data = null) {
+    console.log(`[Analise] ${message}`);
+    if (data) {
+        console.log(data);
+    }
+}
 
-document.addEventListener('DOMContentLoaded', function () {
-
-    const serie = JSON.parse(
-        document.getElementById('serie-data').textContent
-    );
-
-    const pontuacao = JSON.parse(
-        document.getElementById('pontuacao-data').textContent
-    );
-
-    const distribuicao = JSON.parse(
-        document.getElementById('distribuicao-data').textContent
-    );
-
-
-
-    if (
-        document.getElementById('graficoSerie')
-        && serie.length > 0
-    ) {
-
-        new Chart(
-            document.getElementById('graficoSerie'),
-            {
-                type: 'line',
-                data: {
-                    labels: serie.map(item => item.tentativa),
-                    datasets: [{
-                        label: 'Tempo de Reação',
-                        data: serie.map(item => item.tempo_reacao),
-                        borderWidth: 2
-                    }]
+document.addEventListener('DOMContentLoaded', function() {
+    logDebug('Inicializando gráficos...');
+    
+    // Carregar dados
+    let serieData = [];
+    let pontuacaoData = [];
+    let distribuicaoData = [];
+    let espectralData = [];
+    
+    try {
+        const serieElement = document.getElementById('serie-data');
+        if (serieElement && serieElement.textContent) {
+            serieData = JSON.parse(serieElement.textContent);
+            logDebug(`Dados de série carregados: ${serieData.length} registros`);
+        } else {
+            logDebug('Elemento serie-data não encontrado ou vazio');
+        }
+    } catch(e) {
+        logDebug('Erro ao parsear serie-data:', e);
+    }
+    
+    try {
+        const pontuacaoElement = document.getElementById('pontuacao-data');
+        if (pontuacaoElement && pontuacaoElement.textContent) {
+            pontuacaoData = JSON.parse(pontuacaoElement.textContent);
+            logDebug(`Dados de pontuação carregados: ${pontuacaoData.length} registros`);
+        }
+    } catch(e) {
+        logDebug('Erro ao parsear pontuacao-data:', e);
+    }
+    
+    try {
+        const distribuicaoElement = document.getElementById('distribuicao-data');
+        if (distribuicaoElement && distribuicaoElement.textContent) {
+            distribuicaoData = JSON.parse(distribuicaoElement.textContent);
+            logDebug(`Dados de distribuição carregados: ${distribuicaoData.length} registros`);
+        }
+    } catch(e) {
+        logDebug('Erro ao parsear distribuicao-data:', e);
+    }
+    
+    try {
+        const espectralElement = document.getElementById('espectral-data');
+        if (espectralElement && espectralElement.textContent && espectralElement.textContent !== '[]') {
+            espectralData = JSON.parse(espectralElement.textContent);
+            logDebug(`Dados espectrais carregados: ${espectralData.length} registros`);
+        }
+    } catch(e) {
+        logDebug('Erro ao parsear espectral-data:', e);
+    }
+    
+    // Função helper para criar gráficos com verificação
+    function criarGrafico(elementId, config) {
+        const element = document.getElementById(elementId);
+        if (!element) {
+            logDebug(`Elemento ${elementId} não encontrado`);
+            return null;
+        }
+        
+        if (!config.data || !config.data.datasets || config.data.datasets.length === 0) {
+            logDebug(`Configuração inválida para ${elementId}`);
+            return null;
+        }
+        
+        const dataLength = config.data.datasets[0].data.length;
+        if (dataLength === 0) {
+            logDebug(`Sem dados para ${elementId}`);
+            return null;
+        }
+        
+        logDebug(`Criando gráfico ${elementId} com ${dataLength} pontos`);
+        
+        // Destruir gráfico existente se houver
+        const existingChart = Chart.getChart(element);
+        if (existingChart) {
+            existingChart.destroy();
+        }
+        
+        return new Chart(element, config);
+    }
+    
+    // Gráfico de Linha - Evolução
+    if (serieData.length > 0) {
+        criarGrafico('graficoSerie', {
+            type: 'line',
+            data: {
+                labels: serieData.map(item => item.tentativa),
+                datasets: [{
+                    label: 'Tempo de Reação (segundos)',
+                    data: serieData.map(item => item.tempo_reacao),
+                    borderColor: '#8b5cf6',
+                    backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    pointRadius: 5,
+                    pointHoverRadius: 8,
+                    pointBackgroundColor: '#8b5cf6'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Tempo: ${context.parsed.y.toFixed(2)}s`;
+                            }
+                        }
+                    },
+                    legend: {
+                        position: 'top',
+                    }
                 },
-                options: {
-                    responsive: true
+                scales: {
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Tempo de Reação (s)'
+                        },
+                        grid: {
+                            dash: [5, 5]
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Número da Tentativa'
+                        }
+                    }
                 }
             }
-        );
-
+        });
+    } else {
+        logDebug('Sem dados para gráfico de série');
     }
-
-
-
-    if (
-        document.getElementById('graficoPontuacao')
-        && pontuacao.length > 0
-    ) {
-
-        new Chart(
-            document.getElementById('graficoPontuacao'),
-            {
-                type: 'bar',
-                data: {
-                    labels: pontuacao.map(item => item.tipo_acao),
-                    datasets: [{
-                        label: 'Pontuação Média',
-                        data: pontuacao.map(
-                            item => item.pontuacao_media
-                        ),
-                        borderWidth: 1
-                    }]
+    
+    // Gráfico de Barras - Pontuação
+    if (pontuacaoData.length > 0) {
+        const labels = pontuacaoData.map(item => item.tipo_acao || item.tipo);
+        const cores = ['#22c55e', '#3b82f6', '#f59e0b'];
+        
+        criarGrafico('graficoPontuacao', {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Pontuação Média',
+                    data: pontuacaoData.map(item => item.pontuacao_media),
+                    backgroundColor: cores.slice(0, labels.length),
+                    borderRadius: 10,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Pontuação: ${context.parsed.y.toFixed(1)} pts`;
+                            }
+                        }
+                    }
                 },
-                options: {
-                    responsive: true
+                scales: {
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Pontuação'
+                        },
+                        beginAtZero: true,
+                        max: 100
+                    }
                 }
             }
-        );
-
+        });
     }
-
-
-
-    if (
-        document.getElementById('graficoDistribuicao')
-        && distribuicao.length > 0
-    ) {
-
-        new Chart(
-            document.getElementById('graficoDistribuicao'),
-            {
-                type: 'bar',
-                data: {
-                    labels: distribuicao.map(item => item.faixa),
-                    datasets: [{
-                        label: 'Quantidade',
-                        data: distribuicao.map(
-                            item => item.quantidade
-                        ),
-                        borderWidth: 1
-                    }]
+    
+    // Gráfico de Distribuição
+    if (distribuicaoData.length > 0) {
+        const coresDistribuicao = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444'];
+        
+        criarGrafico('graficoDistribuicao', {
+            type: 'bar',
+            data: {
+                labels: distribuicaoData.map(item => item.faixa),
+                datasets: [{
+                    label: 'Quantidade de Tentativas',
+                    data: distribuicaoData.map(item => item.quantidade),
+                    backgroundColor: coresDistribuicao.slice(0, distribuicaoData.length),
+                    borderRadius: 10,
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const item = distribuicaoData[context.dataIndex];
+                                return [
+                                    `Quantidade: ${context.parsed.y}`,
+                                    `Porcentagem: ${item.porcentagem || 0}%`
+                                ];
+                            }
+                        }
+                    }
                 },
-                options: {
-                    responsive: true
+                scales: {
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Quantidade'
+                        },
+                        beginAtZero: true
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Faixa de Tempo'
+                        }
+                    }
                 }
             }
-        );
-
+        });
     }
-
+    
+    // Gráfico Espectral
+    if (espectralData.length > 0) {
+        criarGrafico('graficoEspectral', {
+            type: 'line',
+            data: {
+                labels: espectralData.map((_, i) => i),
+                datasets: [{
+                    label: 'Intensidade Espectral',
+                    data: espectralData.map(item => item.intensidade),
+                    borderColor: '#06b6d4',
+                    backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Intensidade: ${context.parsed.y.toFixed(2)}%`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'Intensidade (%)'
+                        },
+                        min: 0,
+                        max: 100
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Componente Espectral'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    logDebug('Inicialização dos gráficos concluída');
 });
-
 </script>
-
 {% endblock %}

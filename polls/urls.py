@@ -171,10 +171,42 @@ urlpatterns = [
         name="api_tarefa_detail"
     ),
 
-    # ANÁLISE
+    # ============================================================
+    # ANÁLISE - PÁGINA PRINCIPAL
+    # ============================================================
     path(
         "analise/",
         views_analise.analise,
         name="analise"
+    ),
+
+    # ============================================================
+    # ANÁLISE - API ENDPOINTS (PARA REACT/FRONTEND)
+    # ============================================================
+    path(
+        "api/analise/dados-gerais/",
+        views_analise.api_dados_analise,
+        name="api_dados_analise"
+    ),
+
+    path(
+        "api/analise/dados-grupo/",
+        views_analise.api_dados_grupo,
+        name="api_dados_grupo"
+    ),
+
+    # ============================================================
+    # ANÁLISE - EXPORTAÇÃO
+    # ============================================================
+    path(
+        "api/analise/exportar/excel/",
+        views_analise.exportar_excel,
+        name="exportar_excel"
+    ),
+
+    path(
+        "api/analise/exportar/pdf/",
+        views_analise.exportar_pdf,
+        name="exportar_pdf"
     ),
 ]

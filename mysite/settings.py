@@ -3,17 +3,52 @@ Django settings for mysite project.
 """
 
 from pathlib import Path
-import os 
+import os
+import sys
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'django-insecure-tl!)oyd!7(bud1h40uc-yf=gvxlqe@87bmdx-d1w8gkmwe!fi_'
+# ===== CHAVE SECRETA =====
+# Use variável de ambiente em produção
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-tl!)oyd!7(bud1h40uc-yf=gvxlqe@87bmdx-d1w8gkmwe!fi_')
 
-DEBUG = True
+# ===== DEBUG =====
+# Desativa DEBUG em produção
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
+# ===== ALLOWED_HOSTS =====
+# Detecta se está no Render
+IS_RENDER = 'RENDER' in os.environ
 
-# Application definition
+# Hosts permitidos
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    'testserver',
+]
+
+# Adiciona hosts do Render se estiver na plataforma
+if IS_RENDER:
+    # Adiciona o hostname específico
+    render_hostname = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+    if render_hostname:
+        ALLOWED_HOSTS.append(render_hostname)
+    # Permite todos os subdomínios do Render
+    ALLOWED_HOSTS.append('.onrender.com')
+    
+    # Permite qualquer host se DEBUG=False (não recomendado, mas útil)
+    # ALLOWED_HOSTS = ['*']
+
+# Se estiver em desenvolvimento, adicione hosts extras
+if DEBUG:
+    ALLOWED_HOSTS.extend([
+        'localhost',
+        '127.0.0.1',
+        '0.0.0.0',  # Para testes locais
+        'testserver',
+    ])
+
+# ===== Application definition =====
 INSTALLED_APPS = [
     "polls.apps.PollsConfig",
     "django.contrib.admin",
@@ -57,7 +92,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'mysite.wsgi.application'
 
-# Database
+# ===== DATABASE =====
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -65,7 +100,7 @@ DATABASES = {
     }
 }
 
-# Password validation
+# ===== PASSWORD VALIDATION =====
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
     {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
@@ -73,33 +108,66 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-# Internationalization
+# ===== INTERNATIONALIZATION =====
 LANGUAGE_CODE = 'pt-br'
 TIME_ZONE = 'America/Sao_Paulo'
 USE_I18N = True
 USE_TZ = True
 
-# Static files
+# ===== STATIC FILES =====
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Default primary key field type
+# ===== DEFAULT PRIMARY KEY =====
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# ===== NOVAS CONFIGURAÇÕES =====
+# ===== CORS CONFIGURATION =====
+# Configuração para o Render
+if IS_RENDER:
+    # Em produção, lista específica de origens permitidas
+    CORS_ALLOWED_ORIGINS = [
+        'https://capiquest-front-v2.onrender.com',  # Frontend em produção
+        'https://capiquest-back-v2.onrender.com',   # Backend em produção
+        'http://localhost:3000',
+        'http://localhost:8000',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:8000',
+    ]
+    # Em produção, NUNCA use CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOW_ALL_ORIGINS = False
+else:
+    # Em desenvolvimento, permite qualquer origem para facilitar
+    CORS_ALLOWED_ORIGINS = [
+        "http://localhost:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:8000",
+    ]
+    CORS_ALLOW_ALL_ORIGINS = True  # Apenas para desenvolvimento
 
-# CORS - permitir frontend acessar a API
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # React/Next.js
-    "http://localhost:8000",  # Django
-    "http://127.0.0.1:3000",
-    "http://127.0.0.1:8000",
+# Configurações adicionais de CORS (opcional)
+CORS_ALLOW_CREDENTIALS = True  # Permite envio de cookies/credenciais
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
 ]
 
-# Para desenvolvimento apenas - permite qualquer origem
-CORS_ALLOW_ALL_ORIGINS = True
-
-# Configurações do Django REST Framework
+# ===== REST FRAMEWORK =====
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',  # Permite qualquer um (apenas para teste)
@@ -109,3 +177,18 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.BrowsableAPIRenderer',  # Interface web da API
     ],
 }
+
+# ===== CSRF CONFIGURATION =====
+# Configurações para o Render
+CSRF_TRUSTED_ORIGINS = [
+    'https://capiquest-back-v2.onrender.com',
+    'https://capiquest-front-v2.onrender.com',
+    'http://localhost:3000',
+    'http://localhost:8000',
+]
+
+if IS_RENDER:
+    # Adiciona os hosts do Render
+    render_hostname = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+    if render_hostname:
+        CSRF_TRUSTED_ORIGINS.append(f'https://{render_hostname}')

@@ -142,6 +142,7 @@ else:
         "http://localhost:8000",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:8000",
+        "https://capiquest-front-1.onrender.com",
     ]
     CORS_ALLOW_ALL_ORIGINS = True  # Apenas para desenvolvimento
 

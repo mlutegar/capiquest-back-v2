@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.utils import timezone
 from .models import (
     Question, Choice, Tarefa, Crianca, Sessao,
-    Capitulo, Caminho, Desafio, Acao
+    Capitulo, Caminho, Desafio, Acao, MapaMarcador
 )
 
 
@@ -120,16 +120,42 @@ class DesafioAdmin(admin.ModelAdmin):
     conteudo_resumido.short_description = 'Conteúdo'
 
 
+@admin.register(MapaMarcador)
+class MapaMarcadorAdmin(admin.ModelAdmin):
+    list_display = [
+        'jogo', 'fase', 'resposta_chave', 'sigla', 
+        'nivel', 'rotulo', 'valor_quantitativo'
+    ]
+    list_display_links = ['fase']
+    list_filter = ['jogo', 'nivel']
+    search_fields = ['fase', 'resposta_chave', 'rotulo', 'descricao_qualitativa']
+    list_editable = ['sigla', 'nivel', 'rotulo', 'valor_quantitativo']
+    
+    fieldsets = [
+        ('Identificação', {
+            'fields': ['jogo', 'fase', 'resposta_chave']
+        }),
+        ('Classificação', {
+            'fields': ['sigla', 'nivel', 'rotulo', 'valor_quantitativo']
+        }),
+        ('Descrição', {
+            'fields': ['descricao_qualitativa'],
+            'classes': ['collapse']
+        }),
+    ]
+
+
 @admin.register(Acao)
 class AcaoAdmin(admin.ModelAdmin):
     list_display = [
         'crianca', 'sigla', 'tipo', 'fase', 
+        'nivel', 'rotulo_display',
         'tempo_reacao_formatado', 'tempo_resposta_formatado', 
         'pontuacao_formatada', 'created_at'
     ]
     list_display_links = ['crianca']
-    list_filter = ['tipo', 'fase', 'created_at']
-    search_fields = ['crianca__nome', 'resposta', 'sigla']
+    list_filter = ['tipo', 'fase', 'created_at', 'nivel']
+    search_fields = ['crianca__nome', 'resposta', 'sigla', 'rotulo']
     readonly_fields = ['created_at']
     date_hierarchy = 'created_at'
     list_select_related = ['crianca', 'sessao']
@@ -138,10 +164,15 @@ class AcaoAdmin(admin.ModelAdmin):
     fieldsets = [
         ('Quem', {'fields': ['crianca', 'sessao']}),
         ('O que', {'fields': ['fase', 'desafio', 'tipo', 'sigla', 'resposta']}),
+        ('Marcador', {'fields': ['jogo', 'resposta_chave', 'nivel', 'rotulo', 'valor_marcador']}),
         ('Métricas de Tempo', {'fields': ['tempo_reacao', 'tempo_resposta']}),
         ('Pontuação', {'fields': ['pontuacao']}),
         ('Quando', {'fields': ['created_at'], 'classes': ['collapse']}),
     ]
+    
+    def rotulo_display(self, obj):
+        return obj.rotulo or '-'
+    rotulo_display.short_description = 'Rótulo'
     
     def tempo_reacao_formatado(self, obj):
         if obj.tempo_reacao is not None:

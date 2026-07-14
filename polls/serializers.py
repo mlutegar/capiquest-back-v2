@@ -71,13 +71,15 @@ class AcaoSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'crianca', 'crianca_nome', 'sessao', 'sessao_info',
             'fase', 'desafio', 'sigla', 'tipo', 'tipo_display',
-            'resposta', 'tempo_reacao', 'tempo_resposta', 'pontuacao', 'created_at'
+            'resposta', 'tempo_reacao', 'tempo_resposta', 'pontuacao',
+            'jogo', 'resposta_chave', 'nivel', 'rotulo', 'valor_marcador',
+            'created_at'
         ]
-        read_only_fields = ['id', 'created_at', 'pontuacao']
+        read_only_fields = ['id', 'created_at', 'pontuacao', 'nivel', 'rotulo', 'valor_marcador']
 
 
 class RegistrarAcaoSerializer(serializers.Serializer):
-    """Serializer para registrar uma nova ação (sem validação de resposta correta)"""
+    """Serializer para registrar uma nova ação"""
     crianca_id = serializers.IntegerField()
     sessao_id = serializers.IntegerField(required=False, allow_null=True)
     fase = serializers.CharField(max_length=50)
@@ -87,6 +89,9 @@ class RegistrarAcaoSerializer(serializers.Serializer):
     resposta = serializers.CharField(required=False, allow_blank=True)
     tempo_reacao = serializers.DecimalField(max_digits=8, decimal_places=2, required=False, allow_null=True)
     tempo_resposta = serializers.DecimalField(max_digits=8, decimal_places=2, required=False, allow_null=True)
+    # Campos para o marcador
+    jogo = serializers.CharField(max_length=30, required=False, allow_blank=True, allow_null=True)
+    resposta_chave = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
     
     def validate(self, data):
         try:
@@ -127,4 +132,6 @@ class RegistrarAcaoSerializer(serializers.Serializer):
             resposta=validated_data.get('resposta', ''),
             tempo_reacao=validated_data.get('tempo_reacao'),
             tempo_resposta=validated_data.get('tempo_resposta'),
+            jogo=validated_data.get('jogo'),
+            resposta_chave=validated_data.get('resposta_chave'),
         )

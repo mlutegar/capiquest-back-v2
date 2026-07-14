@@ -237,7 +237,6 @@ class Caminho(models.Model):
 class Desafio(models.Model):
     """
     Modelo para representar um desafio dentro de um caminho
-    SEM campo resposta_correta
     """
     TIPO_PISTA_CHOICES = [
         ('text', 'Texto'),
@@ -267,8 +266,6 @@ class Desafio(models.Model):
         verbose_name='Conteúdo da Pista'
     )
     
-    # ===== CAMPO RESPOSTA_CORRETA REMOVIDO =====
-    
     class Meta:
         verbose_name = 'Desafio'
         verbose_name_plural = 'Desafios'
@@ -277,6 +274,80 @@ class Desafio(models.Model):
     
     def __str__(self):
         return f"Desafio {self.ordem} - {self.caminho.nome}"
+
+
+# ========== MAPA DE MARCADORES ==========
+
+class MapaMarcador(models.Model):
+    """
+    Modelo para o mapa de marcadores que classifica as respostas dos jogos
+    """
+    JOGO_CHOICES = [
+        ('piaget', 'Jogo Piaget'),
+        ('volta_casa', 'De volta pra casa'),
+        ('volta_casa_cog', 'De volta pra casa - Cognitivo'),
+    ]
+    
+    jogo = models.CharField(
+        max_length=30,
+        choices=JOGO_CHOICES,
+        verbose_name='Jogo'
+    )
+    
+    fase = models.CharField(
+        max_length=100,
+        verbose_name='Fase / Tela',
+        help_text='Identificador da tela/fase (deve casar com Acao.fase)'
+    )
+    
+    resposta_chave = models.CharField(
+        max_length=100,
+        verbose_name='Chave da Resposta',
+        help_text='Identificador estável da opção (ex: certa, adjacente, longe)'
+    )
+    
+    sigla = models.CharField(
+        max_length=3,
+        verbose_name='Sigla da Ação',
+        blank=True,
+        default=''
+    )
+    
+    nivel = models.IntegerField(
+        verbose_name='Nível',
+        null=True,
+        blank=True,
+        help_text='1, 2 ou 3 (jogos por nível). Vazio nos jogos dimensionais.'
+    )
+    
+    rotulo = models.CharField(
+        max_length=200,
+        verbose_name='Rótulo Qualitativo',
+        blank=True,
+        default=''
+    )
+    
+    valor_quantitativo = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        verbose_name='Valor Quantitativo (Marcador)'
+    )
+    
+    descricao_qualitativa = models.TextField(
+        verbose_name='Descrição Qualitativa',
+        blank=True,
+        null=True
+    )
+    
+    class Meta:
+        verbose_name = 'Mapa de Marcador'
+        verbose_name_plural = 'Mapa de Marcadores'
+        unique_together = ['jogo', 'fase', 'resposta_chave']
+        ordering = ['jogo', 'fase', '-nivel']
+    
+    def __str__(self):
+        nivel_str = f" (Nível {self.nivel})" if self.nivel is not None else ""
+        return f'{self.get_jogo_display()} / {self.fase} / {self.resposta_chave}{nivel_str}'
 
 
 # ========== MODELO AÇÃO ==========
@@ -382,6 +453,47 @@ class Acao(models.Model):
         verbose_name='Pontuação'
     )
     
+    # ===== CAMPOS DO MARCADOR =====
+    jogo = models.CharField(
+        max_length=30,
+        verbose_name='Jogo',
+        blank=True,
+        null=True,
+        help_text='piaget, volta_casa, volta_casa_cog'
+    )
+    
+    resposta_chave = models.CharField(
+        max_length=100,
+        verbose_name='Chave da Resposta',
+        blank=True,
+        null=True,
+        help_text='Identificador da opção escolhida (ex: certa, adjacente, longe)'
+    )
+    
+    nivel = models.IntegerField(
+        verbose_name='Nível do Marcador',
+        null=True,
+        blank=True,
+        help_text='1, 2 ou 3 (preenchido automaticamente pelo mapa)'
+    )
+    
+    rotulo = models.CharField(
+        max_length=200,
+        verbose_name='Rótulo Qualitativo',
+        blank=True,
+        null=True,
+        help_text='Preenchido automaticamente pelo mapa'
+    )
+    
+    valor_marcador = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        verbose_name='Valor do Marcador',
+        null=True,
+        blank=True,
+        help_text='Preenchido automaticamente pelo mapa'
+    )
+    
     # Data/hora
     created_at = models.DateTimeField(
         auto_now_add=True,
@@ -396,7 +508,8 @@ class Acao(models.Model):
     def __str__(self):
         reacao = f" R:{self.tempo_reacao:.2f}s" if self.tempo_reacao else ""
         resposta = f" Rs:{self.tempo_resposta:.2f}s" if self.tempo_resposta else ""
-        return f"{self.crianca.nome} - {self.get_tipo_display()} ({self.sigla}){reacao}{resposta}"
+        marcador = f" [{self.rotulo}]" if self.rotulo else ""
+        return f"{self.crianca.nome} - {self.get_tipo_display()} ({self.sigla}){reacao}{resposta}{marcador}"
     
     def calcular_pontuacao(self):
         """
@@ -462,6 +575,24 @@ class Acao(models.Model):
         if self.pontuacao == 0:
             self.pontuacao = self.calcular_pontuacao()
         
+        # ===== DERIVAÇÃO DO MARCADOR A PARTIR DO MAPA =====
+        if self.jogo and self.resposta_chave and self.nivel is None:
+            try:
+                mapa = MapaMarcador.objects.filter(
+                    jogo=self.jogo,
+                    fase=self.fase,
+                    resposta_chave=self.resposta_chave
+                ).first()
+                if mapa:
+                    self.nivel = mapa.nivel
+                    self.rotulo = mapa.rotulo
+                    self.valor_marcador = mapa.valor_quantitativo
+                    if mapa.sigla:
+                        self.sigla = mapa.sigla
+            except Exception:
+                # Não quebra se o mapa não existir
+                pass
+        
         super().save(*args, **kwargs)
         
         if self.sessao:
@@ -471,6 +602,7 @@ class Acao(models.Model):
             )['total'] or Decimal('0')
             self.sessao.pontuacao_total = total_pontos
             self.sessao.save()
+
 
 class Resultado(models.Model):
     titulo = models.CharField(max_length=200)

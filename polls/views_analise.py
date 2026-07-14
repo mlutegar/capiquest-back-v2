@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.db.models import Avg, Count, F, Q, Max, Min
 from django.utils import timezone
 from datetime import timedelta
-from .models import Crianca, Acao
+from .models import Crianca, Acao, MapaMarcador
 import json
 import numpy as np
 from scipy.fft import fft, fftfreq
@@ -28,18 +28,41 @@ import io
 
 logger = logging.getLogger(__name__)
 
-# Função helper para converter Decimal para float
+
+# ============================================================
+# FUNÇÕES HELPER
+# ============================================================
+
+def _marcador_display(acao):
+    """Retorna representação formatada do marcador para exibição"""
+    nivel = getattr(acao, 'nivel', None)
+    rotulo = getattr(acao, 'rotulo', None)
+    if nivel is None and not rotulo:
+        return None
+    partes = []
+    if nivel is not None:
+        partes.append(f'Nível {nivel}')
+    if rotulo:
+        partes.append(rotulo)
+    return ' - '.join(partes) if partes else None
+
+
 def decimal_to_float(obj):
     if isinstance(obj, Decimal):
         return float(obj)
     raise TypeError
 
-# Custom JSON encoder para Decimal
+
 class DecimalEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Decimal):
             return float(obj)
         return super().default(obj)
+
+
+# ============================================================
+# VIEW PRINCIPAL DE ANÁLISE
+# ============================================================
 
 def analise(request):
     criancas = Crianca.objects.all()
@@ -71,11 +94,10 @@ def analise(request):
                         tempo_reacao_serie.append({
                             "tentativa": i + 1,
                             "tempo_reacao": round(float(r.tempo_reacao), 3),
-                            "marcador": r.marcador if hasattr(r, 'marcador') else None
+                            "marcador": _marcador_display(r)
                         })
                 
                 # 2. Gráfico de barras - Pontuação por Tipo de Ação
-                # CORRIGIDO: usar 'tipo_acao' como alias, não 'tipo'
                 pontuacao_por_tipo = list(
                     resultados.values(tipo_acao=F("tipo"))
                     .annotate(
@@ -218,6 +240,7 @@ def analise(request):
     
     return render(request, "polls/analise.html", contexto)
 
+
 def processar_dados_jitter(resultados, agrupar_por="crianca"):
     """Processa dados para o gráfico Jitter Plot"""
     dados = []
@@ -230,7 +253,9 @@ def processar_dados_jitter(resultados, agrupar_por="crianca"):
                     'grupo': crianca.nome,
                     'valor': float(acao.tempo_reacao) if acao.tempo_reacao else 0,
                     'pontuacao': float(acao.pontuacao) if acao.pontuacao else 0,
-                    'marcador': acao.marcador if hasattr(acao, 'marcador') else None,
+                    'nivel': acao.nivel,
+                    'rotulo': acao.rotulo,
+                    'valor_marcador': float(acao.valor_marcador) if acao.valor_marcador else None,
                     'id': acao.id,
                 })
     elif agrupar_por == "tipo":
@@ -245,7 +270,9 @@ def processar_dados_jitter(resultados, agrupar_por="crianca"):
                 'grupo': grupo,
                 'valor': float(acao.tempo_reacao) if acao.tempo_reacao else 0,
                 'pontuacao': float(acao.pontuacao) if acao.pontuacao else 0,
-                'marcador': acao.marcador if hasattr(acao, 'marcador') else None,
+                'nivel': acao.nivel,
+                'rotulo': acao.rotulo,
+                'valor_marcador': float(acao.valor_marcador) if acao.valor_marcador else None,
                 'id': acao.id,
             })
     else:
@@ -255,11 +282,14 @@ def processar_dados_jitter(resultados, agrupar_por="crianca"):
                 'grupo': faixa,
                 'valor': float(acao.tempo_reacao) if acao.tempo_reacao else 0,
                 'pontuacao': float(acao.pontuacao) if acao.pontuacao else 0,
-                'marcador': acao.marcador if hasattr(acao, 'marcador') else None,
+                'nivel': acao.nivel,
+                'rotulo': acao.rotulo,
+                'valor_marcador': float(acao.valor_marcador) if acao.valor_marcador else None,
                 'id': acao.id,
             })
     
     return dados
+
 
 def calcular_analise_espectral(tempos_reacao):
     """Calcula a análise espectral usando FFT"""
@@ -299,6 +329,7 @@ def calcular_analise_espectral(tempos_reacao):
             for i, t in enumerate(tempos_limpos[:30])
         ]
 
+
 def calcular_taxa_acertos(resultados):
     """Calcula a taxa de acertos baseada na pontuação"""
     try:
@@ -309,6 +340,7 @@ def calcular_taxa_acertos(resultados):
         return 0
     except:
         return 0
+
 
 def calcular_desvio_padrao(dados):
     """Calcula o desvio padrão de uma lista de dados"""
@@ -321,6 +353,11 @@ def calcular_desvio_padrao(dados):
         return math.sqrt(variancia)
     except:
         return 0
+
+
+# ============================================================
+# API
+# ============================================================
 
 def api_dados_analise(request):
     """API endpoint para os componentes React obterem dados de análise"""
@@ -348,7 +385,7 @@ def api_dados_analise(request):
                         tempo_reacao_serie.append({
                             "tentativa": i + 1, 
                             "tempo_reacao": round(float(r.tempo_reacao), 3),
-                            "marcador": r.marcador if hasattr(r, 'marcador') else None
+                            "marcador": _marcador_display(r)
                         })
                 response_data["tempo_reacao_serie"] = tempo_reacao_serie
                 
@@ -364,7 +401,6 @@ def api_dados_analise(request):
                     'skip': 'Pular',
                 }
                 
-                # CORRIGIDO: usar 'tipo_acao' como alias
                 pontuacao_por_tipo = list(
                     resultados.values(tipo_acao=F("tipo"))
                     .annotate(pontuacao_media=Avg("pontuacao"))
@@ -430,8 +466,12 @@ def exportar_excel(request):
     ws1 = wb.active
     ws1.title = "Dados Brutos"
     
-    headers = ["ID", "Criança", "Tipo", "Pontuação", "Tempo de Reação (s)", 
-               "Marcador", "Timestamp", "Data", "Hora"]
+    headers = [
+        "ID", "Criança", "Sigla", "Tipo", 
+        "Pontuação", "Tempo de Reação (s)", 
+        "Nível", "Rótulo", "Valor (Marcador)",
+        "Timestamp", "Data", "Hora"
+    ]
     
     header_font = Font(bold=True, color="FFFFFF")
     header_fill = PatternFill(start_color="667eea", end_color="667eea", fill_type="solid")
@@ -453,18 +493,21 @@ def exportar_excel(request):
     for row_idx, acao in enumerate(queryset, 2):
         ws1.cell(row=row_idx, column=1, value=acao.id)
         ws1.cell(row=row_idx, column=2, value=acao.crianca.nome if acao.crianca else "N/A")
-        ws1.cell(row=row_idx, column=3, value=acao.tipo)
-        ws1.cell(row=row_idx, column=4, value=float(acao.pontuacao) if acao.pontuacao else 0)
-        ws1.cell(row=row_idx, column=5, value=float(acao.tempo_reacao) if acao.tempo_reacao else None)
-        ws1.cell(row=row_idx, column=6, value=acao.marcador if hasattr(acao, 'marcador') and acao.marcador else "")
-        ws1.cell(row=row_idx, column=7, value=acao.created_at.strftime("%Y-%m-%d %H:%M:%S"))
-        ws1.cell(row=row_idx, column=8, value=acao.created_at.strftime("%Y-%m-%d"))
-        ws1.cell(row=row_idx, column=9, value=acao.created_at.strftime("%H:%M:%S"))
+        ws1.cell(row=row_idx, column=3, value=acao.sigla or "")
+        ws1.cell(row=row_idx, column=4, value=acao.tipo)
+        ws1.cell(row=row_idx, column=5, value=float(acao.pontuacao) if acao.pontuacao else 0)
+        ws1.cell(row=row_idx, column=6, value=float(acao.tempo_reacao) if acao.tempo_reacao else None)
+        ws1.cell(row=row_idx, column=7, value=acao.nivel if acao.nivel is not None else "")
+        ws1.cell(row=row_idx, column=8, value=acao.rotulo or "")
+        ws1.cell(row=row_idx, column=9, value=float(acao.valor_marcador) if acao.valor_marcador is not None else "")
+        ws1.cell(row=row_idx, column=10, value=acao.created_at.strftime("%Y-%m-%d %H:%M:%S"))
+        ws1.cell(row=row_idx, column=11, value=acao.created_at.strftime("%Y-%m-%d"))
+        ws1.cell(row=row_idx, column=12, value=acao.created_at.strftime("%H:%M:%S"))
         
-        for col in range(1, 10):
+        for col in range(1, 13):
             ws1.cell(row=row_idx, column=col).border = border
     
-    for col in range(1, 10):
+    for col in range(1, 13):
         ws1.column_dimensions[chr(64 + col)].width = 18
     
     # Folha 2: Estatísticas
@@ -532,7 +575,6 @@ def exportar_excel(request):
         'back': 'Voltar', 'hint': 'Pedir Dica', 'skip': 'Pular',
     }
     
-    # CORRIGIDO: usar 'tipo_acao' como alias
     tipos_data = list(
         queryset.values(tipo_acao=F("tipo"))
         .annotate(media=Avg("pontuacao"), total=Count("id"))
@@ -575,7 +617,7 @@ def exportar_excel(request):
 # ============================================================
 
 def exportar_pdf(request):
-    """Exporta dados de análise para PDF com todos os gráficos (Jitter, Espectral, Pontuação)"""
+    """Exporta dados de análise para PDF com todos os gráficos"""
     
     crianca_id = request.GET.get("crianca_id")
     agrupar_por = request.GET.get("agrupar_por", "crianca")
@@ -600,7 +642,6 @@ def exportar_pdf(request):
     nome_arquivo = f"analise_{crianca_nome.replace(' ', '_')}_{timezone.now().strftime('%Y%m%d_%H%M%S')}.pdf"
     response['Content-Disposition'] = f'attachment; filename="{nome_arquivo}"'
     
-    # Configurar documento com margens menores para caber mais conteúdo
     doc = SimpleDocTemplate(response, pagesize=A4, 
                            rightMargin=1.5*cm, leftMargin=1.5*cm,
                            topMargin=1.5*cm, bottomMargin=1.5*cm)
@@ -622,14 +663,11 @@ def exportar_pdf(request):
         spaceBefore=10
     )
     
-    # Coletar dados
     tempos = [float(a.tempo_reacao) for a in queryset if a.tempo_reacao is not None]
     pontuacoes = [float(a.pontuacao) for a in queryset if a.pontuacao is not None]
     
-    # Dados para Jitter Plot
     dados_jitter = processar_dados_jitter(queryset, agrupar_por)
     
-    # Dados para pontuação por tipo
     tipo_map = {
         'click': 'Clique', 'drag': 'Arrastar', 'type': 'Digitar',
         'select': 'Selecionar', 'submit': 'Enviar', 'next': 'Avançar',
@@ -641,14 +679,11 @@ def exportar_pdf(request):
         .order_by("-media")
     )
     
-    # Dados espectrais
     dados_espectrais = calcular_analise_espectral(tempos) if len(tempos) > 3 else []
     
     story = []
     
-    # ============================================================
     # TÍTULO E ESTATÍSTICAS
-    # ============================================================
     story.append(Paragraph(f"Relatório de Análise de Desempenho", title_style))
     story.append(Paragraph(f"Criança: {crianca_nome}", styles['Normal']))
     story.append(Paragraph(f"Data: {timezone.now().strftime('%d/%m/%Y %H:%M')}", styles['Normal']))
@@ -681,16 +716,13 @@ def exportar_pdf(request):
     story.append(table)
     story.append(Spacer(1, 20))
     
-    # ============================================================
     # GRÁFICO 1: JITTER PLOT
-    # ============================================================
     if dados_jitter and len(dados_jitter) > 0:
         story.append(Paragraph("1. Análise em Grupo - Jitter Plot", heading_style))
         
         try:
             fig1, ax1 = plt.subplots(figsize=(10, 6))
             
-            # Agrupar dados
             grupos = {}
             for item in dados_jitter:
                 chave = item['grupo'] or 'Desconhecido'
@@ -701,20 +733,17 @@ def exportar_pdf(request):
             cores = ['#8b5cf6', '#3b82f6', '#22c55e', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16']
             lista_grupos = list(grupos.keys())
             
-            # Criar Jitter Plot
             import random
-            random.seed(42)  # Para reprodutibilidade
+            random.seed(42)
             
             for idx, (nome_grupo, valores) in enumerate(grupos.items()):
                 x_pos = idx + 1
-                # Adicionar jitter
                 x_jitter = [x_pos + (random.random() - 0.5) * 0.4 for _ in valores]
                 cor = cores[idx % len(cores)]
                 
                 ax1.scatter(x_jitter, valores, alpha=0.6, s=40, 
                            color=cor, label=f'{nome_grupo} (n={len(valores)})')
                 
-                # Linha da média
                 media = np.mean(valores)
                 ax1.axhline(y=media, xmin=(x_pos-0.4)/len(lista_grupos), 
                            xmax=(x_pos+0.4)/len(lista_grupos), 
@@ -746,9 +775,7 @@ def exportar_pdf(request):
             story.append(Paragraph(f"Erro ao gerar gráfico Jitter: {str(e)}", styles['Normal']))
             story.append(Spacer(1, 10))
     
-    # ============================================================
     # GRÁFICO 2: ANÁLISE ESPECTRAL
-    # ============================================================
     if dados_espectrais and len(dados_espectrais) > 0:
         story.append(Paragraph("2. Análise Espectral (Fourier)", heading_style))
         
@@ -756,7 +783,6 @@ def exportar_pdf(request):
             fig2, ax2 = plt.subplots(figsize=(10, 4))
             
             intensidades = [item['intensidade'] for item in dados_espectrais]
-            frequencias = [item['frequencia'] for item in dados_espectrais]
             
             ax2.plot(range(len(intensidades)), intensidades, 
                     color='#06b6d4', linewidth=2)
@@ -784,9 +810,7 @@ def exportar_pdf(request):
             story.append(Paragraph(f"Erro ao gerar gráfico espectral: {str(e)}", styles['Normal']))
             story.append(Spacer(1, 10))
     
-    # ============================================================
     # GRÁFICO 3: PONTUAÇÃO POR TIPO
-    # ============================================================
     if tipos_data:
         story.append(Paragraph("3. Pontuação Média por Tipo de Ação", heading_style))
         
@@ -812,7 +836,6 @@ def exportar_pdf(request):
             ax3.grid(axis='y', alpha=0.3)
             ax3.set_ylim(0, max(medias) * 1.2 if medias else 10)
             
-            # Adicionar valores e quantidades nas barras
             for bar, media, qtd in zip(bars, medias, quantidades):
                 height = bar.get_height()
                 ax3.text(bar.get_x() + bar.get_width()/2., height + 0.5,
@@ -835,9 +858,7 @@ def exportar_pdf(request):
             story.append(Paragraph(f"Erro ao gerar gráfico de pontuação: {str(e)}", styles['Normal']))
             story.append(Spacer(1, 10))
     
-    # ============================================================
     # GRÁFICO 4: DISTRIBUIÇÃO POR TEMPO
-    # ============================================================
     story.append(Paragraph("4. Distribuição por Tempo de Resposta", heading_style))
     
     try:
@@ -881,9 +902,7 @@ def exportar_pdf(request):
         story.append(Paragraph(f"Erro ao gerar gráfico de distribuição: {str(e)}", styles['Normal']))
         story.append(Spacer(1, 10))
     
-    # ============================================================
     # GRÁFICO 5: EVOLUÇÃO DO TEMPO DE REAÇÃO
-    # ============================================================
     if len(tempos) > 1:
         story.append(Paragraph("5. Evolução do Tempo de Reação", heading_style))
         
@@ -913,16 +932,13 @@ def exportar_pdf(request):
             logger.exception("Erro ao gerar gráfico de evolução para PDF: %s", str(e))
             story.append(Paragraph(f"Erro ao gerar gráfico de evolução: {str(e)}", styles['Normal']))
     
-    # ============================================================
     # RODAPÉ
-    # ============================================================
     story.append(Spacer(1, 15))
     story.append(Paragraph(
         f"Relatório gerado em {timezone.now().strftime('%d/%m/%Y às %H:%M')} | Página 1 de 1",
         styles['Normal']
     ))
     
-    # Construir PDF
     doc.build(story)
     return response
 
@@ -952,7 +968,9 @@ def api_dados_grupo(request):
                         'tipo': acao.tipo,
                         'tempo_reacao': float(acao.tempo_reacao) if acao.tempo_reacao else 0,
                         'pontuacao': float(acao.pontuacao) if acao.pontuacao else 0,
-                        'marcador': acao.marcador if hasattr(acao, 'marcador') else None,
+                        'nivel': acao.nivel,
+                        'rotulo': acao.rotulo,
+                        'valor_marcador': float(acao.valor_marcador) if acao.valor_marcador else None,
                         'faixa_etaria': crianca.faixa_etaria if hasattr(crianca, 'faixa_etaria') else None,
                     })
     elif agrupar_por == "tipo":
@@ -965,7 +983,9 @@ def api_dados_grupo(request):
                 'tipo': acao.tipo,
                 'tempo_reacao': float(acao.tempo_reacao) if acao.tempo_reacao else 0,
                 'pontuacao': float(acao.pontuacao) if acao.pontuacao else 0,
-                'marcador': acao.marcador if hasattr(acao, 'marcador') else None,
+                'nivel': acao.nivel,
+                'rotulo': acao.rotulo,
+                'valor_marcador': float(acao.valor_marcador) if acao.valor_marcador else None,
             })
     else:
         for crianca in Crianca.objects.all():
@@ -980,7 +1000,9 @@ def api_dados_grupo(request):
                     'tipo': acao.tipo,
                     'tempo_reacao': float(acao.tempo_reacao) if acao.tempo_reacao else 0,
                     'pontuacao': float(acao.pontuacao) if acao.pontuacao else 0,
-                    'marcador': acao.marcador if hasattr(acao, 'marcador') else None,
+                    'nivel': acao.nivel,
+                    'rotulo': acao.rotulo,
+                    'valor_marcador': float(acao.valor_marcador) if acao.valor_marcador else None,
                     'faixa_etaria': faixa,
                 })
     

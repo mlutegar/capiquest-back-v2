@@ -25,6 +25,7 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     'testserver',
+    'capiquest-front-v2.onrender.com',
 ]
 
 # Adiciona hosts do Render se estiver na plataforma
@@ -46,6 +47,7 @@ if DEBUG:
         '127.0.0.1',
         '0.0.0.0',  # Para testes locais
         'testserver',
+        'capiquest-front-v2.onrender.com',
     ])
 
 # ===== Application definition =====

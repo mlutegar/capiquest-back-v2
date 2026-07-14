@@ -25,7 +25,7 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     'testserver',
-    'capiquest-front-v2.onrender.com',
+    'capiquest-front-1.onrender.com',
 ]
 
 # Adiciona hosts do Render se estiver na plataforma
@@ -47,7 +47,7 @@ if DEBUG:
         '127.0.0.1',
         '0.0.0.0',  # Para testes locais
         'testserver',
-        'capiquest-front-v2.onrender.com',
+        'capiquest-front-1.onrender.com',
     ])
 
 # ===== Application definition =====
@@ -128,7 +128,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 if IS_RENDER:
     # Em produção, lista específica de origens permitidas
     CORS_ALLOWED_ORIGINS = [
-        'https://capiquest-front-v2.onrender.com',  # Frontend em produção
+        'https://capiquest-front-1.onrender.com',  # Frontend em produção
         'https://capiquest-back-v2.onrender.com',   # Backend em produção
         'http://localhost:3000',
         'http://localhost:8000',

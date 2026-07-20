@@ -467,10 +467,20 @@ def exportar_excel(request):
     ws1.title = "Dados Brutos"
     
     headers = [
-        "ID", "Criança", "Sigla", "Tipo", 
-        "Pontuação", "Tempo de Reação (s)", 
-        "Nível", "Rótulo", "Valor (Marcador)",
-        "Timestamp", "Data", "Hora"
+        "ID",
+        "Criança",
+        "Jogo",              # novo
+        "Fase",              # novo
+        "Sigla",
+        "Tipo",
+        "Pontuação",
+        "Tempo de Reação (s)",
+        "Nível",
+        "Rótulo",
+        "Valor (Marcador)",
+        "Timestamp",
+        "Data",
+        "Hora",
     ]
     
     header_font = Font(bold=True, color="FFFFFF")

@@ -1,5 +1,7 @@
 import datetime
 from decimal import Decimal
+from django.db.models import Q
+from django.utils.text import slugify
 from django.db import models
 from django.utils import timezone
 from django.contrib import admin
@@ -350,6 +352,70 @@ class MapaMarcador(models.Model):
         return f'{self.get_jogo_display()} / {self.fase} / {self.resposta_chave}{nivel_str}'
 
 
+class MapaMarcador(models.Model):
+    """
+    Espelha a planilha de marcadores utilizada pelos pesquisadores.
+    """
+
+    jogo = models.CharField(
+        max_length=50,
+        verbose_name="Jogo"
+    )
+
+    fase = models.CharField(
+        max_length=100,
+        verbose_name="Fase"
+    )
+
+    resposta_chave = models.CharField(
+        max_length=200,
+        verbose_name="Resposta Chave"
+    )
+
+    sigla = models.CharField(
+        max_length=3,
+        blank=True,
+        default=""
+    )
+
+    nivel = models.IntegerField(
+        null=True,
+        blank=True
+    )
+
+    rotulo = models.CharField(
+        max_length=100
+    )
+
+    valor_quantitativo = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=0
+    )
+
+    descricao_qualitativa = models.TextField(
+        blank=True,
+        default=""
+    )
+
+    class Meta:
+        verbose_name = "Mapa Marcador"
+        verbose_name_plural = "Mapa Marcadores"
+
+        unique_together = (
+            "jogo",
+            "fase",
+            "resposta_chave",
+        )
+
+        ordering = (
+            "jogo",
+            "fase",
+            "resposta_chave",
+        )
+
+    def __str__(self):
+        return f"{self.jogo} | {self.fase} | {self.resposta_chave}"
 # ========== MODELO AÇÃO ==========
 
 class Acao(models.Model):
@@ -392,6 +458,20 @@ class Acao(models.Model):
         verbose_name='Fase',
         help_text='pre_fase, capitulo_1, capitulo_2, etc'
     )
+
+    jogo = models.CharField(
+    max_length=50,
+    blank=True,
+    default="",
+    verbose_name="Jogo"
+    )
+
+    resposta_chave = models.CharField(
+        max_length=200,
+        blank=True,
+        default="",
+        verbose_name="Resposta Chave"
+    )
     
     # Qual o desafio (opcional)
     desafio = models.ForeignKey(
@@ -410,6 +490,25 @@ class Acao(models.Model):
         help_text='Ex: CLI, DRA, TIP, SEL, ENV, AVN, VOL, DIC, PUL'
     )
     
+    nivel = models.IntegerField(
+    null=True,
+    blank=True,
+    verbose_name="Nível"
+    )
+
+    rotulo = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        verbose_name="Rótulo"
+    )
+
+    valor_marcador = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        default=0,
+        verbose_name="Valor Marcador"
+    )
     # Tipo da ação
     tipo = models.CharField(
         max_length=10,
@@ -506,10 +605,12 @@ class Acao(models.Model):
         ordering = ['-created_at']
     
     def __str__(self):
-        reacao = f" R:{self.tempo_reacao:.2f}s" if self.tempo_reacao else ""
-        resposta = f" Rs:{self.tempo_resposta:.2f}s" if self.tempo_resposta else ""
-        marcador = f" [{self.rotulo}]" if self.rotulo else ""
-        return f"{self.crianca.nome} - {self.get_tipo_display()} ({self.sigla}){reacao}{resposta}{marcador}"
+        return (
+            f"{self.crianca.nome} | "
+            f"{self.jogo} | "
+            f"{self.fase} | "
+            f"{self.rotulo}"
+        )
     
     def calcular_pontuacao(self):
         """
@@ -557,6 +658,42 @@ class Acao(models.Model):
         
         return Decimal('0.3')
     
+    def _derivar_marcador(self):
+        """
+        Consulta o mapa de marcadores e preenche automaticamente
+        os campos derivados.
+        """
+
+        if self.nivel is not None:
+            return
+
+        if not (
+            self.jogo
+            and self.fase
+            and self.resposta_chave
+        ):
+            return
+
+        marcador = (
+            MapaMarcador.objects
+            .filter(
+                jogo=self.jogo,
+                fase=self.fase,
+                resposta_chave=self.resposta_chave
+            )
+            .first()
+        )
+
+        if marcador is None:
+            return
+
+        self.nivel = marcador.nivel
+        self.rotulo = marcador.rotulo
+        self.valor_marcador = marcador.valor_quantitativo
+
+        if marcador.sigla:
+            self.sigla = marcador.sigla
+            
     def save(self, *args, **kwargs):
         if not self.sigla:
             siglas = {
@@ -572,6 +709,8 @@ class Acao(models.Model):
             }
             self.sigla = siglas.get(self.tipo, 'OUT')
         
+        self._derivar_marcador()
+
         if self.pontuacao == 0:
             self.pontuacao = self.calcular_pontuacao()
         
@@ -610,3 +749,4 @@ class Resultado(models.Model):
 
     def __str__(self):
         return self.titulo
+

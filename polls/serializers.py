@@ -2,7 +2,14 @@ from rest_framework import serializers
 from decimal import Decimal
 from django.utils import timezone
 from .models import (
-    Tarefa, Crianca, Sessao, Capitulo, Caminho, Desafio, Acao
+    Tarefa,
+    Crianca,
+    Sessao,
+    Capitulo,
+    Caminho,
+    Desafio,
+    Acao,
+    MapaMarcador,
 )
 
 
@@ -69,20 +76,64 @@ class AcaoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Acao
         fields = [
-            'id', 'crianca', 'crianca_nome', 'sessao', 'sessao_info',
-            'fase', 'desafio', 'sigla', 'tipo', 'tipo_display',
-            'resposta', 'tempo_reacao', 'tempo_resposta', 'pontuacao',
-            'jogo', 'resposta_chave', 'nivel', 'rotulo', 'valor_marcador',
-            'created_at'
-        ]
-        read_only_fields = ['id', 'created_at', 'pontuacao', 'nivel', 'rotulo', 'valor_marcador']
+        "id",
+
+        "crianca",
+        "crianca_nome",
+
+        "sessao",
+        "sessao_info",
+
+        "jogo",
+        "fase",
+
+        "desafio",
+
+        "resposta_chave",
+
+        "sigla",
+
+        "tipo",
+        "tipo_display",
+
+        "nivel",
+        "rotulo",
+        "valor_marcador",
+
+        "resposta",
+
+        "tempo_reacao",
+        "tempo_resposta",
+
+        "pontuacao",
+
+        "created_at",
+    ]
+        read_only_fields = [
+        "id",
+        "created_at",
+        "pontuacao",
+        "nivel",
+        "rotulo",
+        "valor_marcador",
+    ]
 
 
 class RegistrarAcaoSerializer(serializers.Serializer):
     """Serializer para registrar uma nova ação"""
     crianca_id = serializers.IntegerField()
     sessao_id = serializers.IntegerField(required=False, allow_null=True)
-    fase = serializers.CharField(max_length=50)
+    jogo = serializers.CharField(
+        max_length=50
+    )
+
+    fase = serializers.CharField(
+        max_length=100
+    )
+
+    resposta_chave = serializers.CharField(
+        max_length=200
+    )
     desafio_id = serializers.IntegerField(required=False, allow_null=True)
     sigla = serializers.CharField(max_length=3, required=False, allow_blank=True)
     tipo = serializers.ChoiceField(choices=Acao.TIPO_ACAO_CHOICES)
@@ -90,8 +141,7 @@ class RegistrarAcaoSerializer(serializers.Serializer):
     tempo_reacao = serializers.DecimalField(max_digits=8, decimal_places=2, required=False, allow_null=True)
     tempo_resposta = serializers.DecimalField(max_digits=8, decimal_places=2, required=False, allow_null=True)
     # Campos para o marcador
-    jogo = serializers.CharField(max_length=30, required=False, allow_blank=True, allow_null=True)
-    resposta_chave = serializers.CharField(max_length=100, required=False, allow_blank=True, allow_null=True)
+    
     
     def validate(self, data):
         try:
@@ -123,15 +173,22 @@ class RegistrarAcaoSerializer(serializers.Serializer):
     
     def create(self, validated_data):
         return Acao.objects.create(
-            crianca_id=validated_data['crianca_id'],
-            sessao_id=validated_data.get('sessao_id'),
-            fase=validated_data['fase'],
-            desafio_id=validated_data.get('desafio_id'),
-            sigla=validated_data.get('sigla', ''),
-            tipo=validated_data['tipo'],
-            resposta=validated_data.get('resposta', ''),
-            tempo_reacao=validated_data.get('tempo_reacao'),
-            tempo_resposta=validated_data.get('tempo_resposta'),
-            jogo=validated_data.get('jogo'),
-            resposta_chave=validated_data.get('resposta_chave'),
-        )
+        crianca_id=validated_data["crianca_id"],
+        sessao_id=validated_data.get("sessao_id"),
+
+        jogo=validated_data["jogo"],
+        fase=validated_data["fase"],
+
+        desafio_id=validated_data.get("desafio_id"),
+
+        resposta_chave=validated_data["resposta_chave"],
+
+        sigla=validated_data.get("sigla", ""),
+
+        tipo=validated_data["tipo"],
+
+        resposta=validated_data.get("resposta", ""),
+
+        tempo_reacao=validated_data.get("tempo_reacao"),
+        tempo_resposta=validated_data.get("tempo_resposta"),
+    )

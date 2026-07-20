@@ -1,8 +1,16 @@
 from django.contrib import admin
 from django.utils import timezone
 from .models import (
-    Question, Choice, Tarefa, Crianca, Sessao,
-    Capitulo, Caminho, Desafio, Acao, MapaMarcador
+    Question,
+    Choice,
+    Tarefa,
+    Crianca,
+    Sessao,
+    Capitulo,
+    Caminho,
+    Desafio,
+    Acao,
+    MapaMarcador,
 )
 
 
@@ -148,14 +156,33 @@ class MapaMarcadorAdmin(admin.ModelAdmin):
 @admin.register(Acao)
 class AcaoAdmin(admin.ModelAdmin):
     list_display = [
-        'crianca', 'sigla', 'tipo', 'fase', 
-        'nivel', 'rotulo_display',
-        'tempo_reacao_formatado', 'tempo_resposta_formatado', 
-        'pontuacao_formatada', 'created_at'
+        "crianca",
+        "jogo",
+        "fase",
+        "tipo",
+        "sigla",
+        "nivel",
+        "rotulo",
+        "valor_marcador",
+        "tempo_reacao_formatado",
+        "tempo_resposta_formatado",
+        "created_at",
     ]
     list_display_links = ['crianca']
-    list_filter = ['tipo', 'fase', 'created_at', 'nivel']
-    search_fields = ['crianca__nome', 'resposta', 'sigla', 'rotulo']
+    list_filter = [
+        "jogo",
+        "tipo",
+        "nivel",
+        "fase",
+        "created_at",
+    ]
+    search_fields = [
+        "crianca__nome",
+        "fase",
+        "resposta_chave",
+        "rotulo",
+        "sigla",
+    ]
     readonly_fields = ['created_at']
     date_hierarchy = 'created_at'
     list_select_related = ['crianca', 'sessao']
@@ -163,8 +190,30 @@ class AcaoAdmin(admin.ModelAdmin):
     
     fieldsets = [
         ('Quem', {'fields': ['crianca', 'sessao']}),
-        ('O que', {'fields': ['fase', 'desafio', 'tipo', 'sigla', 'resposta']}),
-        ('Marcador', {'fields': ['jogo', 'resposta_chave', 'nivel', 'rotulo', 'valor_marcador']}),
+        (
+        "O que",
+        {
+            "fields": [
+                "jogo",
+                "fase",
+                "desafio",
+                "resposta_chave",
+                "tipo",
+                "sigla",
+                "resposta",
+            ]
+        },
+    ),
+        (
+        "Marcador",
+        {
+            "fields": [
+                "nivel",
+                "rotulo",
+                "valor_marcador",
+            ]
+        },
+    ),
         ('Métricas de Tempo', {'fields': ['tempo_reacao', 'tempo_resposta']}),
         ('Pontuação', {'fields': ['pontuacao']}),
         ('Quando', {'fields': ['created_at'], 'classes': ['collapse']}),
@@ -189,3 +238,4 @@ class AcaoAdmin(admin.ModelAdmin):
     def pontuacao_formatada(self, obj):
         return f"{obj.pontuacao:.2f}"
     pontuacao_formatada.short_description = 'Pontuação'
+

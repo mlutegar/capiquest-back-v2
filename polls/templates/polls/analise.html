@@ -146,6 +146,223 @@
     .btn-export-pdf {
         background: linear-gradient(135deg, #ef4444, #dc2626);
     }
+
+    /* ============================================================
+       ESTILOS DO GRÁFICO DE MARCADORES
+       ============================================================ */
+    .gm-container {
+        margin-top: 30px;
+        padding: 20px;
+        background: #f8fafc;
+        border-radius: 16px;
+        border: 1px solid #e2e8f0;
+    }
+
+    .gm-container h2 {
+        color: #1e293b;
+        font-size: 1.4em;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .gm-container .gm-badge {
+        font-size: 0.6em;
+        background: #667eea;
+        color: white;
+        padding: 2px 12px;
+        border-radius: 20px;
+    }
+
+    .gm-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+
+    .gm-card {
+        background: white;
+        border-radius: 12px;
+        padding: 16px 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        border-left: 4px solid #667eea;
+        transition: transform 0.2s;
+    }
+
+    .gm-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .gm-card-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+    .gm-card-icon {
+        font-size: 1.4em;
+    }
+
+    .gm-card-titulo {
+        font-weight: 600;
+        font-size: 1.05em;
+        color: #1e293b;
+    }
+
+    .gm-card-badge {
+        margin-left: auto;
+        background: #f1f5f9;
+        padding: 2px 12px;
+        border-radius: 20px;
+        font-size: 0.8em;
+        color: #475569;
+    }
+
+    .gm-card-body {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px 16px;
+    }
+
+    .gm-card-stat {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .gm-card-label {
+        font-size: 0.7em;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .gm-card-valor {
+        font-size: 1.1em;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .gm-card-bar {
+        margin-top: 12px;
+        height: 4px;
+        background: #e2e8f0;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .gm-card-progress {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.8s ease;
+    }
+
+    .gm-tabela-container {
+        background: white;
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-top: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        overflow-x: auto;
+    }
+
+    .gm-tabela {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9em;
+    }
+
+    .gm-tabela thead th {
+        background: #f1f5f9;
+        padding: 10px 12px;
+        text-align: left;
+        font-weight: 600;
+        color: #475569;
+        border-bottom: 2px solid #e2e8f0;
+    }
+
+    .gm-tabela tbody td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #f1f5f9;
+        color: #334155;
+    }
+
+    .gm-tabela tbody tr:hover td {
+        background: #f8fafc;
+    }
+
+    .gm-tabela-total {
+        background: #f1f5f9 !important;
+        font-weight: 600;
+    }
+
+    .gm-tabela-total td {
+        border-top: 2px solid #e2e8f0;
+        padding: 10px 12px;
+    }
+
+    .gm-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 24px;
+        margin-top: 12px;
+        padding: 12px 16px;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+
+    .gm-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85em;
+        color: #475569;
+    }
+
+    .gm-legend-color {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        display: inline-block;
+        flex-shrink: 0;
+    }
+
+    .gm-sem-dados {
+        text-align: center;
+        padding: 30px 20px;
+        color: #94a3b8;
+        background: white;
+        border-radius: 12px;
+    }
+
+    .gm-grafico-container {
+        background: white;
+        border-radius: 12px;
+        padding: 16px 20px;
+        margin-top: 16px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+        height: 350px;
+        position: relative;
+    }
+
+    .gm-grafico-container canvas {
+        width: 100% !important;
+        height: 100% !important;
+    }
+
+    /* Responsivo */
+    @media (max-width: 768px) {
+        .gm-cards {
+            grid-template-columns: 1fr;
+        }
+        
+        .gm-card-body {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -211,12 +428,42 @@
     <!-- Marcadores de Navegação -->
     <div class="mb-4">
         <div class="d-flex flex-wrap">
+            <a href="#secao-marcadores" class="nav-marker" style="background: #fef3c7; color: #d97706;">🎯 Marcadores</a>
             <a href="#secao-jitter" class="nav-marker">📊 Jitter Plot</a>
             <a href="#secao-estatisticas" class="nav-marker">📊 Estatísticas</a>
             <a href="#secao-espectral" class="nav-marker">🌈 Espectral</a>
             <a href="#secao-serie" class="nav-marker">⏱️ Evolução</a>
             <a href="#secao-pontuacao" class="nav-marker">🎯 Pontuação</a>
             <a href="#secao-distribuicao" class="nav-marker">📊 Distribuição</a>
+        </div>
+    </div>
+    
+    <!-- ============================================================
+         GRÁFICO DE MARCADORES - NOVA SEÇÃO
+         ============================================================ -->
+    <div id="secao-marcadores" class="gm-container">
+        <h2>
+            🎯 Análise por Marcadores
+            <span class="gm-badge">Níveis de Habilidade</span>
+            {% if has_marcadores %}
+                <span class="badge bg-success ms-2">{{ dados_marcadores_json|length|default:0 }} marcadores</span>
+            {% endif %}
+        </h2>
+        
+        <div id="container-grafico-marcadores">
+            {% if has_marcadores %}
+                <!-- Será renderizado pelo JavaScript -->
+            {% else %}
+                <div class="gm-sem-dados">
+                    <p>📭 Nenhum dado com marcador disponível para esta criança.</p>
+                    <small>Certifique-se de que as ações possuem nível definido no marcador.</small>
+                    <div class="mt-3">
+                        <button onclick="window.location.reload()" class="btn btn-primary btn-sm">
+                            🔃 Recarregar
+                        </button>
+                    </div>
+                </div>
+            {% endif %}
         </div>
     </div>
     
@@ -342,6 +589,13 @@
 {{ dados_jitter_json|safe }}
 </script>
 
+<!-- ============================================================
+     DADOS DOS MARCADORES
+     ============================================================ -->
+<script id="marcadores-data" type="application/json">
+{{ dados_marcadores_json|safe }}
+</script>
+
 <script>
 function exportarDados(formato) {
     const criancaId = document.getElementById('crianca').value;
@@ -368,6 +622,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // CARREGAR DADOS
     // ============================================================
     let serieData = [], pontuacaoData = [], distribuicaoData = [], espectralData = [], dadosJitter = [];
+    let dadosMarcadores = null;
+    let hasMarcadores = false;
     
     try {
         const el = document.getElementById('serie-data');
@@ -399,6 +655,15 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     } catch(e) { logDebug('Erro ao parsear jitter-data:', e); }
     
+    try {
+        const el = document.getElementById('marcadores-data');
+        if (el && el.textContent && el.textContent !== '{}' && el.textContent !== '[]') {
+            dadosMarcadores = JSON.parse(el.textContent);
+            hasMarcadores = dadosMarcadores && dadosMarcadores.total > 0;
+            logDebug(`Dados Marcadores carregados: ${dadosMarcadores ? dadosMarcadores.total : 0} registros`);
+        }
+    } catch(e) { logDebug('Erro ao parsear marcadores-data:', e); }
+    
     // ============================================================
     // FUNÇÃO AUXILIAR PARA CRIAR GRÁFICOS
     // ============================================================
@@ -412,6 +677,239 @@ document.addEventListener('DOMContentLoaded', function() {
         if (existing) existing.destroy();
         return new Chart(element, config);
     }
+    
+    // ============================================================
+    // GRÁFICO DE MARCADORES
+    // ============================================================
+    function renderizarGraficoMarcadores() {
+        const container = document.getElementById('container-grafico-marcadores');
+        if (!container) return;
+        
+        // Se não houver dados de marcadores, mostrar mensagem
+        if (!hasMarcadores || !dadosMarcadores || dadosMarcadores.total === 0) {
+            container.innerHTML = `
+                <div class="gm-sem-dados">
+                    <p>📭 Nenhum dado com marcador disponível para esta criança.</p>
+                    <small>Para importar marcadores, execute no terminal:</small>
+                    <br>
+                    <code style="background: #f1f5f9; padding: 4px 12px; border-radius: 4px; display: inline-block; margin-top: 8px;">
+                        python manage.py importar_mapas_marcadores "caminho/para/Mapa de Marcadores.xlsx"
+                    </code>
+                    <div class="mt-3">
+                        <button onclick="window.location.reload()" class="btn btn-primary btn-sm">
+                            🔃 Recarregar
+                        </button>
+                    </div>
+                </div>
+            `;
+            return;
+        }
+        
+        const { dados_por_nivel, total } = dadosMarcadores;
+        
+        // Cores por nível
+        const cores = {
+            1: { bg: '#ef4444', label: 'Ausência', icone: '🔴' },
+            2: { bg: '#f59e0b', label: 'Intermediário', icone: '🟡' },
+            3: { bg: '#22c55e', label: 'Êxito', icone: '🟢' }
+        };
+        
+        // ============================================================
+        // 1. CARDS DE RESUMO
+        // ============================================================
+        let cardsHtml = '<div class="gm-cards">';
+        
+        for (const nivel of [1, 2, 3]) {
+            const stats = dados_por_nivel.find(d => d.nivel === nivel) || { 
+                quantidade: 0, 
+                tempo_medio: 0, 
+                tempo_min: 0, 
+                tempo_max: 0,
+                pontuacao_media: 0
+            };
+            const cor = cores[nivel];
+            const pct = total > 0 ? (stats.quantidade / total * 100) : 0;
+            
+            cardsHtml += `
+                <div class="gm-card" style="border-left-color: ${cor.bg}">
+                    <div class="gm-card-header">
+                        <span class="gm-card-icon">${cor.icone}</span>
+                        <span class="gm-card-titulo">${cor.label}</span>
+                        <span class="gm-card-badge">${stats.quantidade} ações</span>
+                    </div>
+                    <div class="gm-card-body">
+                        <div class="gm-card-stat">
+                            <span class="gm-card-label">⏱ Tempo médio</span>
+                            <span class="gm-card-valor" style="color: ${cor.bg}">
+                                ${(stats.tempo_medio || 0).toFixed(2)}s
+                            </span>
+                        </div>
+                        <div class="gm-card-stat">
+                            <span class="gm-card-label">📊 Porcentagem</span>
+                            <span class="gm-card-valor">${pct.toFixed(1)}%</span>
+                        </div>
+                        <div class="gm-card-stat">
+                            <span class="gm-card-label">📉 Min - Max</span>
+                            <span class="gm-card-valor">
+                                ${(stats.tempo_min || 0).toFixed(2)}s - ${(stats.tempo_max || 0).toFixed(2)}s
+                            </span>
+                        </div>
+                        <div class="gm-card-stat">
+                            <span class="gm-card-label">⭐ Pontuação média</span>
+                            <span class="gm-card-valor">${(stats.pontuacao_media || 0).toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <div class="gm-card-bar">
+                        <div class="gm-card-progress" style="width: ${pct}%; background: ${cor.bg}"></div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        cardsHtml += '</div>';
+        
+        // ============================================================
+        // 2. GRÁFICO DE BARRAS
+        // ============================================================
+        const labels = [];
+        const dadosBarras = [];
+        const coresBarras = [];
+        
+        for (const nivel of [1, 2, 3]) {
+            const stats = dados_por_nivel.find(d => d.nivel === nivel);
+            if (stats && stats.quantidade > 0) {
+                labels.push(cores[nivel].label);
+                dadosBarras.push(stats.tempo_medio || 0);
+                coresBarras.push(cores[nivel].bg);
+            }
+        }
+        
+        let graficoHtml = '';
+        if (dadosBarras.length > 0) {
+            const maxValor = Math.max(...dadosBarras, 1) * 1.2;
+            
+            graficoHtml = `
+                <div class="gm-grafico-container">
+                    <h5 style="margin-bottom: 12px; color: #1e293b;">📈 Tempo Médio por Nível</h5>
+                    <div style="display: flex; justify-content: center; align-items: flex-end; height: 250px; gap: 30px; padding: 0 20px;">
+                        ${dadosBarras.map((valor, i) => `
+                            <div style="display: flex; flex-direction: column; align-items: center; gap: 8px; width: 60px;">
+                                <div style="font-size: 12px; font-weight: 600; color: #1e293b;">${valor.toFixed(2)}s</div>
+                                <div style="width: 40px; height: ${(valor / maxValor) * 200}px; background: ${coresBarras[i]}; border-radius: 4px 4px 0 0; transition: height 0.8s ease;"></div>
+                                <div style="font-size: 13px; color: #64748b; text-align: center; font-weight: 500;">${labels[i]}</div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // ============================================================
+        // 3. TABELA DETALHADA
+        // ============================================================
+        let tabelaHtml = `
+            <div class="gm-tabela-container">
+                <h5 style="margin-bottom: 12px;">📋 Detalhamento por Nível</h5>
+                <table class="gm-tabela">
+                    <thead>
+                        <tr>
+                            <th>Nível</th>
+                            <th>Quantidade</th>
+                            <th>Porcentagem</th>
+                            <th>Tempo Médio</th>
+                            <th>Tempo Mínimo</th>
+                            <th>Tempo Máximo</th>
+                            <th>Pontuação Média</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        let totalQuantidade = 0;
+        let totalPontuacao = 0;
+        
+        for (const nivel of [1, 2, 3]) {
+            const stats = dados_por_nivel.find(d => d.nivel === nivel) || { 
+                quantidade: 0, tempo_medio: 0, tempo_min: 0, tempo_max: 0, pontuacao_media: 0 
+            };
+            const cor = cores[nivel];
+            const pct = total > 0 ? (stats.quantidade / total * 100) : 0;
+            
+            totalQuantidade += stats.quantidade || 0;
+            totalPontuacao += (stats.pontuacao_media || 0) * (stats.quantidade || 0);
+            
+            tabelaHtml += `
+                <tr>
+                    <td style="color: ${cor.bg}; font-weight: 500;">
+                        ${cor.icone} ${cor.label}
+                    </td>
+                    <td>${stats.quantidade}</td>
+                    <td>${pct.toFixed(1)}%</td>
+                    <td>${(stats.tempo_medio || 0).toFixed(2)}s</td>
+                    <td>${(stats.tempo_min || 0).toFixed(2)}s</td>
+                    <td>${(stats.tempo_max || 0).toFixed(2)}s</td>
+                    <td>${(stats.pontuacao_media || 0).toFixed(2)}</td>
+                </tr>
+            `;
+        }
+        
+        const mediaGeral = totalQuantidade > 0 ? totalPontuacao / totalQuantidade : 0;
+        
+        tabelaHtml += `
+                    </tbody>
+                    <tfoot>
+                        <tr class="gm-tabela-total">
+                            <td><strong>📊 TOTAL</strong></td>
+                            <td><strong>${totalQuantidade}</strong></td>
+                            <td>100%</td>
+                            <td><strong>-</strong></td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td><strong>${mediaGeral.toFixed(2)}</strong></td>
+                        </tr>
+                    </tfoot>
+                </table>
+                <div style="margin-top: 12px; padding: 8px 12px; background: #f0f9ff; border-radius: 8px; color: #0369a1; font-size: 0.9em;">
+                    💡 <strong>Interpretação:</strong> Níveis mais altos (Êxito) geralmente apresentam 
+                    tempos de reação menores e pontuações mais altas, indicando melhor desempenho na tarefa.
+                </div>
+            </div>
+        `;
+        
+        // ============================================================
+        // 4. LEGENDA
+        // ============================================================
+        const legendaHtml = `
+            <div class="gm-legend">
+                ${[1, 2, 3].map(nivel => `
+                    <div class="gm-legend-item">
+                        <span class="gm-legend-color" style="background: ${cores[nivel].bg}"></span>
+                        <span>Nível ${nivel} - ${cores[nivel].label}: ${nivel === 1 ? 'Baixo desempenho' : nivel === 2 ? 'Em desenvolvimento' : 'Alto desempenho'}</span>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+        
+        // ============================================================
+        // MONTAR TUDO
+        // ============================================================
+        container.innerHTML = `
+            <div style="padding: 10px; background: #f8fafc; border-radius: 16px;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 0.95em; color: #475569;">
+                        Total de ações com marcador: <strong style="color: #667eea;">${total}</strong>
+                    </div>
+                </div>
+                ${cardsHtml}
+                ${graficoHtml}
+                ${tabelaHtml}
+                ${legendaHtml}
+            </div>
+        `;
+    }
+    
+    // Inicializar gráfico de marcadores
+    renderizarGraficoMarcadores();
     
     // ============================================================
     // JITTER PLOT

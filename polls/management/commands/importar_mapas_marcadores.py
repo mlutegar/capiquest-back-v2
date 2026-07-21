@@ -160,10 +160,10 @@ class Command(BaseCommand):
 
         # Mapear abas por nome
         abas_esperadas = {
-            'piaget': 'piaget',
-            'volta_casa': 'volta_casa',
-            'volta_casa_cog': 'volta_casa_cog',
-        }
+        'piaget': 'Jogo Piaget',
+        'volta_casa': 'De volta pra casa',
+        'volta_casa_cog': 'De volta pra casa - Cognitivo',
+    }
         
         for cfg in configs:
             jogo = cfg['jogo']

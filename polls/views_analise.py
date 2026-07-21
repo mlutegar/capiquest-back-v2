@@ -469,15 +469,17 @@ def exportar_excel(request):
     headers = [
         "ID",
         "Criança",
-        "Jogo",              # novo
-        "Fase",              # novo
+        "Jogo",
+        "Fase",
         "Sigla",
         "Tipo",
-        "Pontuação",
-        "Tempo de Reação (s)",
+        "Resposta",
         "Nível",
         "Rótulo",
         "Valor (Marcador)",
+        "Pontuação",
+        "Tempo de Reação (s)",
+        "Tempo de Resposta (s)",
         "Timestamp",
         "Data",
         "Hora",
@@ -503,21 +505,29 @@ def exportar_excel(request):
     for row_idx, acao in enumerate(queryset, 2):
         ws1.cell(row=row_idx, column=1, value=acao.id)
         ws1.cell(row=row_idx, column=2, value=acao.crianca.nome if acao.crianca else "N/A")
-        ws1.cell(row=row_idx, column=3, value=acao.sigla or "")
-        ws1.cell(row=row_idx, column=4, value=acao.tipo)
-        ws1.cell(row=row_idx, column=5, value=float(acao.pontuacao) if acao.pontuacao else 0)
-        ws1.cell(row=row_idx, column=6, value=float(acao.tempo_reacao) if acao.tempo_reacao else None)
-        ws1.cell(row=row_idx, column=7, value=acao.nivel if acao.nivel is not None else "")
-        ws1.cell(row=row_idx, column=8, value=acao.rotulo or "")
-        ws1.cell(row=row_idx, column=9, value=float(acao.valor_marcador) if acao.valor_marcador is not None else "")
-        ws1.cell(row=row_idx, column=10, value=acao.created_at.strftime("%Y-%m-%d %H:%M:%S"))
-        ws1.cell(row=row_idx, column=11, value=acao.created_at.strftime("%Y-%m-%d"))
-        ws1.cell(row=row_idx, column=12, value=acao.created_at.strftime("%H:%M:%S"))
-        
-        for col in range(1, 13):
+        ws1.cell(row=row_idx, column=3, value=acao.jogo or "")
+        ws1.cell(row=row_idx, column=4, value=acao.fase or "")
+        ws1.cell(row=row_idx, column=5, value=acao.sigla or "")
+        ws1.cell(row=row_idx, column=6, value=acao.get_tipo_display())
+        ws1.cell(row=row_idx, column=7, value=acao.resposta or "")
+        ws1.cell(row=row_idx, column=8, value=acao.nivel if acao.nivel is not None else "")
+        ws1.cell(row=row_idx, column=9, value=acao.rotulo or "")
+        ws1.cell(
+            row=row_idx,
+            column=10,
+            value=float(acao.valor_marcador) if acao.valor_marcador is not None else None
+        )
+        ws1.cell(row=row_idx, column=11, value=float(acao.pontuacao) if acao.pontuacao else 0)
+        ws1.cell(row=row_idx, column=12, value=float(acao.tempo_reacao) if acao.tempo_reacao else None)
+        ws1.cell(row=row_idx, column=13, value=float(acao.tempo_resposta) if acao.tempo_resposta else None)
+        ws1.cell(row=row_idx, column=14, value=acao.created_at.strftime("%Y-%m-%d %H:%M:%S"))
+        ws1.cell(row=row_idx, column=15, value=acao.created_at.strftime("%Y-%m-%d"))
+        ws1.cell(row=row_idx, column=16, value=acao.created_at.strftime("%H:%M:%S"))
+
+        for col in range(1, 17):
             ws1.cell(row=row_idx, column=col).border = border
-    
-    for col in range(1, 13):
+
+    for col in range(1, 17):
         ws1.column_dimensions[chr(64 + col)].width = 18
     
     # Folha 2: Estatísticas
@@ -1021,3 +1031,453 @@ def api_dados_grupo(request):
         'total': len(dados),
         'agrupado_por': agrupar_por
     })
+
+# ============================================================
+# API MARCARDORES (para o componente React)
+# ============================================================
+
+def api_dados_marcadores(request):
+    """
+    API para dados de análise por marcador - mostra relação entre
+    tempo de reação e nível do marcador
+    
+    Parâmetros:
+        crianca_id (opcional): ID da criança para filtrar
+        tipo_acao (opcional): Filtrar por tipo de ação
+    """
+    crianca_id = request.GET.get("crianca_id")
+    tipo_acao = request.GET.get("tipo_acao")
+    
+    # Query base
+    queryset = Acao.objects.filter(
+        tempo_reacao__isnull=False,
+        nivel__isnull=False  # Apenas ações com marcador definido
+    ).select_related('crianca', 'mapa_marcador')
+    
+    # Aplicar filtros
+    if crianca_id:
+        queryset = queryset.filter(crianca_id=crianca_id)
+    
+    if tipo_acao:
+        queryset = queryset.filter(tipo=tipo_acao)
+    
+    # Mapeamento de nível para rótulo
+    NIVEL_ROTULO = {
+        1: 'Ausência',
+        2: 'Intermediário',
+        3: 'Êxito',
+    }
+    
+    # Dados agregados por nível
+    dados_por_nivel = list(
+        queryset.values('nivel')
+        .annotate(
+            tempo_medio=Avg('tempo_reacao'),
+            tempo_min=Min('tempo_reacao'),
+            tempo_max=Max('tempo_reacao'),
+            quantidade=Count('id'),
+            pontuacao_media=Avg('pontuacao')
+        )
+        .order_by('nivel')
+    )
+    
+    # Processar dados por nível
+    for item in dados_por_nivel:
+        nivel = item['nivel']
+        item['nivel_rotulo'] = NIVEL_ROTULO.get(nivel, f'Nível {nivel}')
+        item['tempo_medio'] = round(float(item['tempo_medio']), 3) if item['tempo_medio'] else 0
+        item['tempo_min'] = round(float(item['tempo_min']), 3) if item['tempo_min'] else 0
+        item['tempo_max'] = round(float(item['tempo_max']), 3) if item['tempo_max'] else 0
+        item['pontuacao_media'] = round(float(item['pontuacao_media']), 2) if item['pontuacao_media'] else 0
+        item['quantidade'] = item['quantidade'] or 0
+    
+    # Garantir que todos os níveis estejam presentes
+    niveis_existentes = {item['nivel'] for item in dados_por_nivel}
+    for nivel in [1, 2, 3]:
+        if nivel not in niveis_existentes:
+            dados_por_nivel.append({
+                'nivel': nivel,
+                'nivel_rotulo': NIVEL_ROTULO.get(nivel, f'Nível {nivel}'),
+                'tempo_medio': 0,
+                'tempo_min': 0,
+                'tempo_max': 0,
+                'quantidade': 0,
+                'pontuacao_media': 0,
+            })
+    
+    # Ordenar por nível
+    dados_por_nivel.sort(key=lambda x: x['nivel'])
+    
+    # Dados detalhados por marcador (para boxplot e scatter)
+    dados_por_marcador = []
+    for acao in queryset.order_by('created_at'):
+        dados_por_marcador.append({
+            'id': acao.id,
+            'crianca': acao.crianca.nome if acao.crianca else '',
+            'crianca_id': acao.crianca_id,
+            'nivel': acao.nivel,
+            'nivel_rotulo': NIVEL_ROTULO.get(acao.nivel, f'Nível {acao.nivel}'),
+            'rotulo': acao.rotulo or '',
+            'tempo_reacao': float(acao.tempo_reacao) if acao.tempo_reacao else 0,
+            'pontuacao': float(acao.pontuacao) if acao.pontuacao else 0,
+            'tipo': acao.tipo,
+            'created_at': acao.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'jogo': acao.jogo or '',
+            'fase': acao.fase or '',
+        })
+    
+    # Estatísticas adicionais por nível (desvio padrão)
+    for item in dados_por_nivel:
+        nivel = item['nivel']
+        tempos = [float(a.tempo_reacao) for a in queryset.filter(nivel=nivel) if a.tempo_reacao]
+        if len(tempos) > 1:
+            item['desvio_padrao'] = round(np.std(tempos), 3)
+        else:
+            item['desvio_padrao'] = 0
+    
+    response_data = {
+        'dados_por_nivel': dados_por_nivel,
+        'dados_por_marcador': dados_por_marcador,
+        'total': len(dados_por_marcador),
+        'niveis_disponiveis': [1, 2, 3],
+        'filtros': {
+            'crianca_id': crianca_id,
+            'tipo_acao': tipo_acao,
+        }
+    }
+    
+    return JsonResponse(response_data, encoder=DecimalEncoder)
+
+
+def api_marcadores_resumo(request):
+    """
+    API para resumo rápido dos dados de marcadores
+    Retorna apenas estatísticas agregadas para dashboards
+    """
+    crianca_id = request.GET.get("crianca_id")
+    
+    queryset = Acao.objects.filter(
+        tempo_reacao__isnull=False,
+        nivel__isnull=False
+    )
+    
+    if crianca_id:
+        queryset = queryset.filter(crianca_id=crianca_id)
+    
+    total = queryset.count()
+    
+    if total == 0:
+        return JsonResponse({
+            'total': 0,
+            'por_nivel': [],
+            'tempo_medio_geral': 0,
+            'pontuacao_media_geral': 0,
+        })
+    
+    # Estatísticas por nível
+    por_nivel = list(
+        queryset.values('nivel')
+        .annotate(
+            quantidade=Count('id'),
+            tempo_medio=Avg('tempo_reacao'),
+            pontuacao_media=Avg('pontuacao')
+        )
+        .order_by('nivel')
+    )
+    
+    # Processar
+    NIVEL_ROTULO = {1: 'Ausência', 2: 'Intermediário', 3: 'Êxito'}
+    for item in por_nivel:
+        item['rotulo'] = NIVEL_ROTULO.get(item['nivel'], f'Nível {item["nivel"]}')
+        item['tempo_medio'] = round(float(item['tempo_medio']), 3) if item['tempo_medio'] else 0
+        item['pontuacao_media'] = round(float(item['pontuacao_media']), 2) if item['pontuacao_media'] else 0
+        item['porcentagem'] = round((item['quantidade'] / total) * 100, 1)
+    
+    # Médias gerais
+    tempos = [float(a.tempo_reacao) for a in queryset if a.tempo_reacao]
+    pontuacoes = [float(a.pontuacao) for a in queryset if a.pontuacao]
+    
+    return JsonResponse({
+        'total': total,
+        'por_nivel': por_nivel,
+        'tempo_medio_geral': round(sum(tempos) / len(tempos), 3) if tempos else 0,
+        'pontuacao_media_geral': round(sum(pontuacoes) / len(pontuacoes), 2) if pontuacoes else 0,
+    })
+
+# ============================================================
+# ANÁLISE DE MARCADORES - FUNÇÕES
+# ============================================================
+
+def processar_dados_marcadores(queryset):
+    """
+    Processa dados de marcadores para o gráfico
+    
+    Args:
+        queryset: QuerySet de ações com tempo_reacao e nivel definidos
+    
+    Returns:
+        dict: Dados processados por nível e por marcador
+    """
+    # Filtrar apenas ações com marcador definido
+    acoes_com_marcador = queryset.filter(nivel__isnull=False)
+    
+    if not acoes_com_marcador.exists():
+        return {
+            'dados_por_nivel': [],
+            'dados_por_marcador': [],
+            'total': 0,
+            'niveis_disponiveis': [1, 2, 3],
+        }
+    
+    NIVEL_ROTULO = {
+        1: 'Ausência',
+        2: 'Intermediário',
+        3: 'Êxito',
+    }
+    
+    # Dados agregados por nível
+    dados_por_nivel = list(
+        acoes_com_marcador.values('nivel')
+        .annotate(
+            tempo_medio=Avg('tempo_reacao'),
+            tempo_min=Min('tempo_reacao'),
+            tempo_max=Max('tempo_reacao'),
+            quantidade=Count('id'),
+            pontuacao_media=Avg('pontuacao')
+        )
+        .order_by('nivel')
+    )
+    
+    # Processar dados por nível
+    for item in dados_por_nivel:
+        nivel = item['nivel']
+        item['nivel_rotulo'] = NIVEL_ROTULO.get(nivel, f'Nível {nivel}')
+        item['tempo_medio'] = round(float(item['tempo_medio']), 3) if item['tempo_medio'] else 0
+        item['tempo_min'] = round(float(item['tempo_min']), 3) if item['tempo_min'] else 0
+        item['tempo_max'] = round(float(item['tempo_max']), 3) if item['tempo_max'] else 0
+        item['pontuacao_media'] = round(float(item['pontuacao_media']), 2) if item['pontuacao_media'] else 0
+        item['quantidade'] = item['quantidade'] or 0
+    
+    # Garantir que todos os níveis estejam presentes
+    niveis_existentes = {item['nivel'] for item in dados_por_nivel}
+    for nivel in [1, 2, 3]:
+        if nivel not in niveis_existentes:
+            dados_por_nivel.append({
+                'nivel': nivel,
+                'nivel_rotulo': NIVEL_ROTULO.get(nivel, f'Nível {nivel}'),
+                'tempo_medio': 0,
+                'tempo_min': 0,
+                'tempo_max': 0,
+                'quantidade': 0,
+                'pontuacao_media': 0,
+                'desvio_padrao': 0,
+            })
+    
+    dados_por_nivel.sort(key=lambda x: x['nivel'])
+    
+    # Calcular desvio padrão por nível
+    import numpy as np
+    for item in dados_por_nivel:
+        nivel = item['nivel']
+        tempos = [float(a.tempo_reacao) for a in acoes_com_marcador.filter(nivel=nivel) if a.tempo_reacao]
+        if len(tempos) > 1:
+            item['desvio_padrao'] = round(np.std(tempos), 3)
+        else:
+            item['desvio_padrao'] = 0
+    
+    # Dados detalhados por marcador
+    dados_por_marcador = []
+    for acao in acoes_com_marcador.order_by('created_at'):
+        dados_por_marcador.append({
+            'id': acao.id,
+            'crianca': acao.crianca.nome if acao.crianca else '',
+            'crianca_id': acao.crianca_id,
+            'nivel': acao.nivel,
+            'nivel_rotulo': NIVEL_ROTULO.get(acao.nivel, f'Nível {acao.nivel}'),
+            'rotulo': acao.rotulo or '',
+            'tempo_reacao': float(acao.tempo_reacao) if acao.tempo_reacao else 0,
+            'pontuacao': float(acao.pontuacao) if acao.pontuacao else 0,
+            'tipo': acao.tipo,
+            'created_at': acao.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+            'jogo': acao.jogo or '',
+            'fase': acao.fase or '',
+        })
+    
+    return {
+        'dados_por_nivel': dados_por_nivel,
+        'dados_por_marcador': dados_por_marcador,
+        'total': len(dados_por_marcador),
+        'niveis_disponiveis': [1, 2, 3],
+    }
+
+
+def api_dados_marcadores(request):
+    """
+    API para dados de análise por marcador - mostra relação entre
+    tempo de reação e nível do marcador
+    
+    Parâmetros:
+        crianca_id (opcional): ID da criança para filtrar
+        tipo_acao (opcional): Filtrar por tipo de ação
+    
+    Retorna:
+        JSON com dados agregados por nível e dados detalhados por marcador
+    """
+    crianca_id = request.GET.get("crianca_id")
+    tipo_acao = request.GET.get("tipo_acao")
+    
+    # Query base
+    queryset = Acao.objects.filter(
+        tempo_reacao__isnull=False,
+        nivel__isnull=False  # Apenas ações com marcador definido
+    ).select_related('crianca', 'mapa_marcador')
+    
+    # Aplicar filtros
+    if crianca_id:
+        queryset = queryset.filter(crianca_id=crianca_id)
+    
+    if tipo_acao:
+        queryset = queryset.filter(tipo=tipo_acao)
+    
+    # Processar dados
+    dados = processar_dados_marcadores(queryset)
+    
+    # Adicionar informações de filtros
+    dados['filtros'] = {
+        'crianca_id': crianca_id,
+        'tipo_acao': tipo_acao,
+    }
+    
+    return JsonResponse(dados, encoder=DecimalEncoder)
+
+
+def api_marcadores_resumo(request):
+    """
+    API para resumo rápido dos dados de marcadores
+    Retorna apenas estatísticas agregadas para dashboards
+    
+    Parâmetros:
+        crianca_id (opcional): ID da criança para filtrar
+    
+    Retorna:
+        JSON com resumo das estatísticas
+    """
+    crianca_id = request.GET.get("crianca_id")
+    
+    queryset = Acao.objects.filter(
+        tempo_reacao__isnull=False,
+        nivel__isnull=False
+    ).select_related('crianca')
+    
+    if crianca_id:
+        queryset = queryset.filter(crianca_id=crianca_id)
+    
+    total = queryset.count()
+    
+    if total == 0:
+        return JsonResponse({
+            'total': 0,
+            'por_nivel': [],
+            'tempo_medio_geral': 0,
+            'pontuacao_media_geral': 0,
+        })
+    
+    NIVEL_ROTULO = {
+        1: 'Ausência',
+        2: 'Intermediário',
+        3: 'Êxito',
+    }
+    
+    # Estatísticas por nível
+    por_nivel = list(
+        queryset.values('nivel')
+        .annotate(
+            quantidade=Count('id'),
+            tempo_medio=Avg('tempo_reacao'),
+            pontuacao_media=Avg('pontuacao')
+        )
+        .order_by('nivel')
+    )
+    
+    # Processar
+    for item in por_nivel:
+        item['rotulo'] = NIVEL_ROTULO.get(item['nivel'], f'Nível {item["nivel"]}')
+        item['tempo_medio'] = round(float(item['tempo_medio']), 3) if item['tempo_medio'] else 0
+        item['pontuacao_media'] = round(float(item['pontuacao_media']), 2) if item['pontuacao_media'] else 0
+        item['porcentagem'] = round((item['quantidade'] / total) * 100, 1)
+    
+    # Médias gerais
+    tempos = [float(a.tempo_reacao) for a in queryset if a.tempo_reacao]
+    pontuacoes = [float(a.pontuacao) for a in queryset if a.pontuacao]
+    
+    # Garantir que todos os níveis estejam presentes
+    niveis_existentes = {item['nivel'] for item in por_nivel}
+    for nivel in [1, 2, 3]:
+        if nivel not in niveis_existentes:
+            por_nivel.append({
+                'nivel': nivel,
+                'rotulo': NIVEL_ROTULO.get(nivel, f'Nível {nivel}'),
+                'quantidade': 0,
+                'tempo_medio': 0,
+                'pontuacao_media': 0,
+                'porcentagem': 0,
+            })
+    
+    por_nivel.sort(key=lambda x: x['nivel'])
+    
+    return JsonResponse({
+        'total': total,
+        'por_nivel': por_nivel,
+        'tempo_medio_geral': round(sum(tempos) / len(tempos), 3) if tempos else 0,
+        'pontuacao_media_geral': round(sum(pontuacoes) / len(pontuacoes), 2) if pontuacoes else 0,
+    })
+
+
+def analise_marcadores(request):
+    """
+    View para página de análise específica de marcadores
+    
+    Esta é uma página alternativa que foca apenas nos dados de marcadores,
+    sem os outros gráficos da análise principal.
+    """
+    criancas = Crianca.objects.all()
+    crianca_id = request.GET.get("crianca_id")
+    
+    queryset = Acao.objects.filter(
+        tempo_reacao__isnull=False,
+        nivel__isnull=False
+    ).select_related('crianca')
+    
+    if crianca_id:
+        queryset = queryset.filter(crianca_id=crianca_id)
+    
+    # Processar dados para o template
+    dados_marcadores = processar_dados_marcadores(queryset)
+    
+    # Estatísticas por nível para exibição no template
+    stats_por_nivel = []
+    for nivel in [1, 2, 3]:
+        acoes_nivel = queryset.filter(nivel=nivel)
+        if acoes_nivel.exists():
+            tempos = [float(a.tempo_reacao) for a in acoes_nivel if a.tempo_reacao]
+            stats_por_nivel.append({
+                'nivel': nivel,
+                'rotulo': {1: 'Ausência', 2: 'Intermediário', 3: 'Êxito'}.get(nivel, f'Nível {nivel}'),
+                'quantidade': acoes_nivel.count(),
+                'tempo_medio': round(sum(tempos) / len(tempos), 3) if tempos else 0,
+                'tempo_min': round(min(tempos), 3) if tempos else 0,
+                'tempo_max': round(max(tempos), 3) if tempos else 0,
+                'desvio_padrao': round(np.std(tempos), 3) if len(tempos) > 1 else 0,
+                'pontuacao_media': round(acoes_nivel.aggregate(Avg('pontuacao'))['pontuacao__avg'] or 0, 2),
+            })
+    
+    contexto = {
+        'criancas': criancas,
+        'crianca_id_selecionada': crianca_id or '',
+        'stats_por_nivel': stats_por_nivel,
+        'has_data': bool(queryset.exists()),
+        'dados_marcadores_json': json.dumps(dados_marcadores, cls=DecimalEncoder),
+        'total_acoes': queryset.count(),
+    }
+    
+    return render(request, "polls/analise_marcadores.html", contexto)

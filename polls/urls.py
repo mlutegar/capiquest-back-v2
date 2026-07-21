@@ -6,7 +6,9 @@ app_name = "polls"
 
 urlpatterns = [
 
+    # ============================================================
     # AÇÕES
+    # ============================================================
     path(
         "api/acoes/registrar/",
         views.RegistrarAcaoView.as_view(),
@@ -25,7 +27,9 @@ urlpatterns = [
         name="api_acoes_detail"
     ),
 
+    # ============================================================
     # CRIANÇAS
+    # ============================================================
     path(
         "api/criancas/",
         views.CriancaListView.as_view(),
@@ -38,7 +42,9 @@ urlpatterns = [
         name="api_crianca_detail"
     ),
 
+    # ============================================================
     # SESSÕES
+    # ============================================================
     path(
         "api/sessoes/iniciar/",
         views.IniciarSessaoView.as_view(),
@@ -63,7 +69,9 @@ urlpatterns = [
         name="api_sessao_finalizar"
     ),
 
+    # ============================================================
     # CAPÍTULOS
+    # ============================================================
     path(
         "api/capitulos/",
         views.CapituloListView.as_view(),
@@ -82,21 +90,27 @@ urlpatterns = [
         name="api_capitulo_caminhos"
     ),
 
+    # ============================================================
     # CAMINHOS
+    # ============================================================
     path(
         "api/caminhos/<int:caminho_id>/desafios/",
         views.CaminhoDesafiosView.as_view(),
         name="api_caminho_desafios"
     ),
 
+    # ============================================================
     # PROGRESSÃO
+    # ============================================================
     path(
         "api/progressao/<int:crianca_id>/",
         views.ProgressaoView.as_view(),
         name="api_progressao"
     ),
 
+    # ============================================================
     # HOME
+    # ============================================================
     path(
         "",
         views.IndexView.as_view(),
@@ -121,7 +135,9 @@ urlpatterns = [
         name="vote"
     ),
 
-    # TAREFAS
+    # ============================================================
+    # TAREFAS (TEMPLATES)
+    # ============================================================
     path(
         "tarefas/",
         views.TarefaListView.as_view(),
@@ -158,7 +174,9 @@ urlpatterns = [
         name="tarefa_concluir"
     ),
 
+    # ============================================================
     # TAREFAS API
+    # ============================================================
     path(
         "api/tarefas/",
         views.TarefaListCreateAPIView.as_view(),
@@ -208,5 +226,29 @@ urlpatterns = [
         "api/analise/exportar/pdf/",
         views_analise.exportar_pdf,
         name="exportar_pdf"
+    ),
+
+    # ============================================================
+    # ANÁLISE - MARCADORES (NOVO)
+    # ============================================================
+    # API para dados de marcadores (usado pelo componente React)
+    path(
+        "api/dados-marcadores/",
+        views_analise.api_dados_marcadores,
+        name="api_dados_marcadores"
+    ),
+
+    # API para resumo rápido dos dados de marcadores
+    path(
+        "api/marcadores/resumo/",
+        views_analise.api_marcadores_resumo,
+        name="api_marcadores_resumo"
+    ),
+
+    # Página de análise específica para marcadores (opcional)
+    path(
+        "analise/marcadores/",
+        views_analise.analise_marcadores,
+        name="analise_marcadores"
     ),
 ]
